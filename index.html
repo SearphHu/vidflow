@@ -1277,6 +1277,7 @@ window.saveApiKey = saveApiKey;
 window.saveDeepSeekKey = saveDeepSeekKey;
 window.saveCurrentCanvas = saveCurrentCanvas;
 window.renameProject = renameProject;function goHome() {
+  switchPage('home');
   // Auto-save if on canvas
   var cp = document.getElementById("page-create");
   if (cp && cp.classList.contains("active") && nodes.length > 0) { saveCurrentCanvas(); }
