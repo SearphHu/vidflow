@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -125,6 +125,7 @@ const SeedanceAPI={
   image2Key: localStorage.getItem('image2_api_key') || '',
   seedanceMiniKey: localStorage.getItem('seedance_mini_api_key') || '',
   image2Endpoint: 'https://api.openai.com/v1/images/generations',
+  seedreamEndpoint: 'https://ark.cn-beijing.volces.com/api/v3/images/generations',
   endpoint: 'https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks',
   modelId: 'doubao-seedance-2-0-260128',
   setApiKey(k){this.apiKey=k;localStorage.setItem('seedance_api_key',k)},
@@ -189,7 +190,17 @@ const SeedanceAPI={
     var urls=['https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4','https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4','https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4','https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4'];
     return{id:'gen_'+Date.now(),video_url:urls[Math.floor(Math.random()*urls.length)],prompt:p.prompt||'',model:this.modelId,status:'completed',created_at:new Date().toISOString()}
   },
-  async generateImage(prompt){
+  async generateImage(prompt,model){
+    if(model==='seedream'){
+      if(!this.seedreamKey)return{error:'Seedream API Key Not Set'};
+      try{
+        var r2=await fetch(this.seedreamEndpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+this.seedreamKey},body:JSON.stringify({model:'doubao-seedream-5-0-260128',prompt:prompt,n:1,size:'1024x1024',response_format:'url',watermark:true})});
+        if(!r2.ok)throw new Error('HTTP '+r2.status);
+        var d2=await r2.json();
+        var imgUrl=d2.data&&d2.data[0]&&d2.data[0].url?d2.data[0].url:(d2.image_url||'');
+        return{id:'img_'+Date.now(),image_url:imgUrl||'https://picsum.photos/800/450?random='+Math.random(),prompt:prompt};
+      }catch(e2){console.error(e2);return{error:'Seedream API Error: '+e2.message}}
+    }
     if(!this.image2Key)return{id:'img_'+Date.now(),image_url:'https://picsum.photos/800/450?random='+Math.random(),prompt:prompt};
     try{
       var r=await fetch(this.image2Endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+this.image2Key},body:JSON.stringify({model:'dall-e-2',prompt:prompt,n:1,size:'1024x1024'})});
@@ -730,43 +741,41 @@ function uploadFile(type) {
   if (inp) inp.click();
 }
 function handleFileUpload(event, type) {
-
   var files = event.target.files;
-
   if (!files || files.length === 0) return;
   var totalFiles = files.length;
   var savedFiles = []; for (var si = 0; si < totalFiles; si++) { savedFiles.push(files[si]); }
   event.target.value = '';
-
+  var pending = totalFiles;
   for (var fi = 0; fi < totalFiles; fi++) {
-  
     var f = savedFiles[fi];
-  
     try {
-    
-      var url = URL.createObjectURL(f);
-    
-    var nodeType = type === 'image' ? 'image' : 'video';
-    var node = addNode(nodeType, 100 + fi * 40, 100 + fi * 40);
-    
-    if (node) {
-    
-      node.data['_' + type + '_url'] = url; node.lastResult = {}; node.lastResult[(type === 'image' ? 'image_url' : 'video_url')] = url;
-      node.data.prompt = f.name;
-      if (node.el) { var nt = node.el.querySelector('.node-title'); if (nt) nt.textContent = type === 'image' ? 'Image' : 'Video'; }
-      var bodyEl = node.el ? node.el.querySelector('.node-body') : null;
-      if (bodyEl) {
-        var preview = '';
-        if (type === 'image') {
-          preview = '<img src="' + url + '" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border-bottom:1px solid var(--border)" alt="' + f.name + '">';
-        } else {
-          preview = '<video src="' + url + '" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border-bottom:1px solid var(--border)" controls></video>';
-        }
-        bodyEl.innerHTML = preview + '<div class="node-result" style="margin:0;border-radius:0;padding:8px 12px;font-size:12px;color:var(--text2)">' + f.name + '</div>';
-      }
-      showToast('Uploaded: ' + f.name);
-    }
-  } catch(e) {showToast('Upload Error: ' + e.message,'error');console.error(e)}
+      var fr = new FileReader();
+      fr.onload = function(evt, ff, ttype, fidx) {
+        return function() {
+          var url = evt.target.result;
+          var nodeType = ttype === 'image' ? 'image' : 'video';
+          var node = addNode(nodeType, 100 + fidx * 40, 100 + fidx * 40);
+          if (node) {
+            node.data['_' + ttype + '_url'] = url; node.lastResult = {}; node.lastResult[(ttype === 'image' ? 'image_url' : 'video_url')] = url;
+            node.data.prompt = ff.name;
+            if (node.el) { var nt = node.el.querySelector('.node-title'); if (nt) nt.textContent = ttype === 'image' ? 'Image' : 'Video'; }
+            var bodyEl = node.el ? node.el.querySelector('.node-body') : null;
+            if (bodyEl) {
+              var preview = '';
+              if (ttype === 'image') {
+                preview = '<img src="' + url + '" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border-bottom:1px solid var(--border)" alt="' + ff.name + '">';
+              } else {
+                preview = '<video src="' + url + '" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border-bottom:1px solid var(--border)" controls></video>';
+              }
+              bodyEl.innerHTML = preview + '<div class="node-result" style="margin:0;border-radius:0;padding:8px 12px;font-size:12px;color:var(--text2)">' + ff.name + '</div>';
+            }
+            showToast('Uploaded: ' + ff.name);
+          }
+        };
+      }(evt, f, type, fi)();
+      fr.readAsDataURL(f);
+    } catch(e) {showToast('Upload Error: ' + e.message,'error');console.error(e)}
   }
   switchPage('create');
 }
@@ -847,6 +856,14 @@ function startConnection(nodeId, port, e) {
   if (!target) return;
   if (!nodeId || !port) { var pEl = target.closest('.side-port') || target; nodeId = pEl.getAttribute('data-node') || nodeId; port = pEl.getAttribute('data-port') || port; }
   if (!nodeId || !port) return;
+  // Enforce max 9 connections per target node
+  var srcNode = port.indexOf("output") >= 0 ? nodeId : null;
+  var tgtNode = port.indexOf("output") < 0 ? nodeId : null;
+  if (tgtNode) {
+    var curCt = 0;
+    for (var ci = 0; ci < connections.length; ci++) { if (connections[ci].to === tgtNode) curCt++; }
+    if (curCt >= 9) { showToast("Maximum 9 connections per node", "error"); return; }
+  }
   var dot = target.querySelector('.side-port-dot') || target;
   var dRect = dot.getBoundingClientRect();
   connecting = { active: true, sourceNode: nodeId, sourcePort: port, mouseX: dRect.left + dRect.width/2, mouseY: dRect.top + dRect.height/2, sourceX: dRect.left + dRect.width/2, sourceY: dRect.top + dRect.height/2 };
@@ -862,7 +879,21 @@ function onConnectMove(e) { if (!connecting.active) return; connecting.mouseX = 
 function onConnectEnd(e) {
   if (!connecting.active) return;
   var target = e.target.closest('.side-port, .port-dot');
-  if (!target) { cleanupConnection(); return; }
+  if (!target) {
+    // Wider hit detection: find nearest port within 25px
+    var allSidePorts = document.querySelectorAll('.side-port');
+    if (allSidePorts.length > 0) {
+      var best = null, bestDist = 25;
+      for (var pi = 0; pi < allSidePorts.length; pi++) {
+        var r = allSidePorts[pi].getBoundingClientRect();
+        var cx = r.left + r.width/2, cy = r.top + r.height/2;
+        var dx = e.clientX - cx, dy = e.clientY - cy;
+        var dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < bestDist) { bestDist = dist; target = allSidePorts[pi]; }
+      }
+    }
+    if (!target) { cleanupConnection(); return; }
+  }
   if (target.classList.contains('side-port-input') || (target.classList.contains('port-dot') && target.classList.contains('input'))) {
     var portEl = target.closest('.side-port') || target;
     var toNode = portEl.getAttribute('data-node');
@@ -951,9 +982,12 @@ function getNodeBodyHTML(node) {
       return '<div class="node-preview-area"><div class="node-preview-placeholder"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".4"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div><textarea id="' + node.id + '-textarea" placeholder="Enter Prompt text..." oninput="onPromptInput(this,\'' + node.id + '\')">' + p + '</textarea></div>';
     case 'text':
       return '<div class="node-preview-area"><div class="node-preview-placeholder"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".4"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><textarea placeholder="Enter text prompt..." oninput="updateNodeData(\'' + node.id + '\',\'prompt\',this.value)">' + p + '</textarea></div>';
-    case 'image':
+        case 'image':
+      if (d._image_url) {
+        return '<div class="node-preview-area"><img src="' + d._image_url + '" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border-bottom:1px solid var(--border)" alt=""><div class="node-result" style="margin:0;border-radius:0;padding:8px 12px;font-size:12px;color:var(--text2)">' + (d.prompt || "Uploaded Image") + '</div></div>';
+      }
       return '<div class="node-preview-area"><input type="text" placeholder="Image prompt..." value="' + p + '" oninput="updateNodeData(\'' + node.id + '\',\'prompt\',this.value)"></div><div class="node-params"><div class="param-row"><label>Size</label><select onchange="updateNodeData(\'' + node.id + '\',\'resolution\',this.value)"><option value="720x1280">720x1280</option><option value="1080x1920">1080x1920</option><option value="1024x1024">1024x1024</option></select></div></div>';
-    case 'video':
+case 'video':
       return '<div class="node-preview-area"><div class="node-refs" id="refs-' + node.id + '"><span class="node-ref-empty">No connected assets</span></div><textarea id="' + node.id + '-textarea" placeholder="Enter video prompt..." oninput="onPromptInput(this,\'' + node.id + '\')">' + p + '</textarea><div class="mention-dropdown" id="mention-' + node.id + '" style="display:none"></div></div><div class="node-params"><div class="param-row"><label>Model</label><select onchange="updateNodeData(\'' + node.id + '\',\'model\',this.value)"><option value="seedance-2" ' + (d.model === 'seedance-2' ? 'selected' : '') + '>Seedance 2.0</option><option value="seedance-mini" ' + (d.model === 'seedance-mini' ? 'selected' : '') + '>Seedance Mini</option></select></div><div class="param-row"><label>Duration(s)</label><input type="range" min="4" max="15" value="' + dur + '" oninput="updateNodeData(\'' + node.id + '\',\'duration\',parseInt(this.value));document.getElementById(\'dur-val-' + node.id + '\').textContent=this.value"><span class="param-val" id="dur-val-' + node.id + '">' + dur + '</span></div><div class="param-row"><label>Ratio</label><select onchange="updateNodeData(\' + node.id + \',\'ratio\',this.value)"><option value="16:9" \' + (d.ratio === \'16:9\' ? \'selected\' : \'\') + \'>16:9(Landscape)</option><option value="9:16" \' + (d.ratio === \'9:16\' ? \'selected\' : \'\') + \'>9:16(Portrait)</option><option value="1:1" \' + (d.ratio === \'1:1\' ? \'selected\' : \'\') + \'>1:1(Square)</option><option value="4:3" \' + (d.ratio === \'4:3\' ? \'selected\' : \'\') + \'>4:3</option><option value="3:4" \' + (d.ratio === \'3:4\' ? \'selected\' : \'\') + \'>3:4</option></select></div><div class="param-row"><label>Quality</label><select onchange="updateNodeData(\' + node.id + \',\'quality\',this.value)"><option value="480P" \' + (d.quality === \'480P\' ? \'selected\' : \'\') + \'>480P</option><option value="720P" \' + (d.quality === \'720P\' ? \'selected\' : \'\') + \'>720P</option><option value="1080P" \' + (d.quality === \'1080P\' ? \'selected\' : \'\') + \'>1080P</option></select></div></div><button class="btn-gen" onclick="executeWorkflow()" style="width:100%;padding:8px 12px;margin-top:8px;background:linear-gradient(135deg,#10B981,#059669);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">\u279c Generate Video</button><div class="node-result" id="result-' + node.id + '" style="display:none"></div>';
     case 'preview':
       return '<div class="node-preview-area"><div class="node-preview-placeholder"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".4"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div></div>';
@@ -1017,7 +1051,7 @@ async function execNode(node) {
   switch (node.type) {
     case "prompt": return { text: node.data.prompt || "" };
     case "text": var p = node.getInput("prompt") || node.data.prompt || "default"; return await SeedanceAPI.generateText(p);
-    case "image": var pi = node.getInput("prompt") || node.data.prompt || "default"; if(node.data._image_url)return{id:"img_"+Date.now(),image_url:node.data._image_url,prompt:pi}; return await SeedanceAPI.generateImage(pi);
+    case "image": var pi = node.getInput("prompt") || node.data.prompt || "default"; if(node.data._image_url)return{id:"img_"+Date.now(),image_url:node.data._image_url,prompt:pi}; var imodel = node.data.model || "image2"; return await SeedanceAPI.generateImage(pi, imodel);
     case "video":
       var pv = node.getInput("prompt") || node.data.prompt || "default";
       pv = pv.replace(/@\w+/g,'').trim();
@@ -1157,7 +1191,31 @@ async function execFromNode(n){var g=getNode(n);if(!g){showToast('Node not found
 function autoSL(){if(nodes.length===0)return;try{var p=JSON.parse(localStorage.getItem('seedance_projects')||'[]');var d={name:'Project '+(p.length+1),desc:nodes.length+' nodes',date:new Date().toLocaleDateString(),nodes:nodes.length,nodesData:JSON.parse(JSON.stringify(nodes)),connections:JSON.parse(JSON.stringify(connections))};p[0]=d;if(p.length>50)p.length=50;localStorage.setItem('seedance_projects',JSON.stringify(p))}catch(e){}}
 function setupAS(){var oa=addNode;addNode=function(t,x,y){var r=oa(t,x,y);setTimeout(autoSL,100);if(r&&(r.type==='text'||r.type==='image'))addMS(r);if(r&&r.type==='video')expandBtn(r.id);return r};var or=removeNode;removeNode=function(i){or(i);setTimeout(autoSL,100)}}
 function newProj(){saveCurrentCanvas();nodes=[];connections=[];nodeIdCounter=0;var e=document.getElementById('nodes-layer');if(e)e.innerHTML='';renderConnections();switchPage('create');showToast('New project created')}
-function loadProj(n){try{var a=JSON.parse(localStorage.getItem('seedance_projects')||'[]');var p=a[n];if(!p)return;nodes=p.nodesData||[];connections=p.connections||[];var e=document.getElementById('nodes-layer');if(e)e.innerHTML='';for(var i=0;i<nodes.length;i++){renderNode(nodes[i]);if(nodes[i].type==='video'){renderRefs(nodes[i].id);expandBtn(nodes[i].id)}if(nodes[i].type==='text'||nodes[i].type==='image'){addMS(nodes[i]);expandBtn(nodes[i].id)}}renderConnections();switchPage('create');showToast('Loaded: '+p.name)}catch(e){showToast('Load failed','error')}}
+
+function restoreMediaPreview(node) {
+  if (!node || !node.el) return;
+  if (node.type !== 'image') return; // Only for uploaded image nodes, NOT video nodes
+  if (!node.data || !node.data._image_url) return;
+  var body = node.el.querySelector('.node-body');
+  if (!body) return;
+  var url = node.data._image_url;
+  body.innerHTML = '<img src="' + url + '" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border-bottom:1px solid var(--border)" alt="' + (node.data.prompt || '') + '">' +
+    '<div class="node-result" style="margin:0;border-radius:0;padding:8px 12px;font-size:12px;color:var(--text2)">' + (node.data.prompt || '') + '</div>';
+  // Restore generated result if exists
+  if (node.lastResult) {
+    var resDiv = document.getElementById('result-' + node.id);
+    if (resDiv) {
+      resDiv.style.display = 'block';
+      if (node.lastResult.image_url) {
+        resDiv.innerHTML = '<img src="' + node.lastResult.image_url + '" style="width:100%;border-radius:6px">';
+      } else if (node.lastResult.text) {
+        resDiv.innerHTML = '<div style="padding:8px;font-size:12px;white-space:pre-wrap;">' + node.lastResult.text + '</div>';
+      }
+    }
+  }
+}
+
+function loadProj(n){try{var a=JSON.parse(localStorage.getItem('seedance_projects')||'[]');var p=a[n];if(!p)return;nodes=p.nodesData||[];connections=p.connections||[];var e=document.getElementById('nodes-layer');if(e)e.innerHTML='';for(var i=0;i<nodes.length;i++){renderNode(nodes[i]);if(nodes[i].type==='video'){renderRefs(nodes[i].id);expandBtn(nodes[i].id)}if(nodes[i].type==='text'||nodes[i].type==='image'){addMS(nodes[i]);expandBtn(nodes[i].id)}if(nodes[i].type==='image'&&nodes[i].data&&nodes[i].data._image_url){restoreMediaPreview(nodes[i])}}renderConnections();switchPage('create');showToast('Loaded: '+p.name)}catch(e){showToast('Load failed','error')}}
 function delProj(n){try{var a=JSON.parse(localStorage.getItem('seedance_projects')||'[]');a.splice(n,1);localStorage.setItem('seedance_projects',JSON.stringify(a));goHome();showToast('Project deleted')}catch(e){}}
 // API settings functions
 function toggleApiInput() {
