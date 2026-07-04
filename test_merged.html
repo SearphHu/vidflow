@@ -23,7 +23,7 @@
 </a>
 <div class="nav-links">
 <a href="#" class="nav-link" data-page="home" onclick="switchPage('home')">Home</a>
-<a href="#" class="nav-link active" data-page="create" onclick="switchPage('create')">Studio</a>
+<a href="#" class="nav-link active" data-page="create" onclick="switchPage(\'create\')">Studio</a>
 </div>
 </div>
 <div class="nav-right">
@@ -214,8 +214,8 @@ const SeedanceAPI={
   }
 };
 
-</script>
-<script>
+
+
 const NODE_TYPES = {
   prompt: { color: '#F59E0B', title: 'Prompt', icon: 'P', inputs: [], outputs: ['text'], defaults: { prompt: '' } },
   text: { color: '#8B5CF6', title: 'Text Gen', icon: 'T', inputs: ['prompt'], outputs: ['text'], defaults: {} },
