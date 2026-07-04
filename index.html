@@ -17,12 +17,12 @@
 <nav class="navbar">
 <div class="nav-container">
 <div class="nav-left">
-<a href="#" class="nav-brand" onclick="switchPage('home')">
+<a href="#" class="nav-brand" onclick="goHome()">
 <img src="assets/vidflow-icon.svg" class="brand-icon" alt="VidFlow">
 <span class="brand-text">VidFlow</span>
 </a>
 <div class="nav-links">
-<a href="#" class="nav-link" data-page="home" onclick="switchPage('home')">Home</a>
+<a href="#" class="nav-link" data-page="home" onclick="goHome()">Home</a>
 <a href="#" class="nav-link active" data-page="create" onclick="switchPage('create')">Studio</a>
 </div>
 </div>
@@ -1156,7 +1156,7 @@ function addMS(node){if(!node||!node.el||(node.type!=='text'&&node.type!=='image
 async function execFromNode(n){var g=getNode(n);if(!g){showToast('Node not found','error');return}showToast('Generating...');var e=document.getElementById('result-'+n);if(e){e.style.display='block';e.innerHTML='<div style="padding:10px;text-align:center;color:var(--text3);font-size:12px;">Generating...</div>'}try{var r=await execNode(g);g.lastResult=r||{};if(e){if(r.video_url){e.innerHTML='<div style="position:relative;"><video src="'+r.video_url+'" controls style="width:100%;border-radius:6px;display:block;background:#000;" autoplay muted></video></div>'}else if(r.image_url){e.innerHTML='<img src="'+r.image_url+'" style="width:100%;border-radius:6px">'}else if(r.text){e.innerHTML='<div style="padding:8px;font-size:12px;white-space:pre-wrap;">'+r.text+'</div>'}else if(r.error){e.innerHTML='<div style="color:#ff4444;padding:8px;font-size:12px;">Error: '+r.error+'</div>'}else{e.innerHTML='<div style="padding:8px;font-size:11px;color:var(--text2);">Completed</div>'}}if(g.type==='video'||g.type==='image')expandBtn(g.id);for(var i=0;i<nodes.length;i++)renderRefs(nodes[i].id)}catch(ex){console.error(ex);showToast('Failed: '+ex.message,'error');if(e)e.innerHTML='<div style="color:#ff4444;padding:8px;font-size:12px;">Error: '+ex.message+'</div>'}}
 function autoSL(){if(nodes.length===0)return;try{var p=JSON.parse(localStorage.getItem('seedance_projects')||'[]');var d={name:'Project '+(p.length+1),desc:nodes.length+' nodes',date:new Date().toLocaleDateString(),nodes:nodes.length,nodesData:JSON.parse(JSON.stringify(nodes)),connections:JSON.parse(JSON.stringify(connections))};p[0]=d;if(p.length>50)p.length=50;localStorage.setItem('seedance_projects',JSON.stringify(p))}catch(e){}}
 function setupAS(){var oa=addNode;addNode=function(t,x,y){var r=oa(t,x,y);setTimeout(autoSL,100);if(r&&(r.type==='text'||r.type==='image'))addMS(r);if(r&&r.type==='video')expandBtn(r.id);return r};var or=removeNode;removeNode=function(i){or(i);setTimeout(autoSL,100)}}
-function newProj(){nodes=[];connections=[];nodeIdCounter=0;var e=document.getElementById('nodes-layer');if(e)e.innerHTML='';renderConnections();switchPage('create');showToast('New project created')}
+function newProj(){saveCurrentCanvas();nodes=[];connections=[];nodeIdCounter=0;var e=document.getElementById('nodes-layer');if(e)e.innerHTML='';renderConnections();switchPage('create');showToast('New project created')}
 function loadProj(n){try{var a=JSON.parse(localStorage.getItem('seedance_projects')||'[]');var p=a[n];if(!p)return;nodes=p.nodesData||[];connections=p.connections||[];var e=document.getElementById('nodes-layer');if(e)e.innerHTML='';for(var i=0;i<nodes.length;i++){renderNode(nodes[i]);if(nodes[i].type==='video'){renderRefs(nodes[i].id);expandBtn(nodes[i].id)}if(nodes[i].type==='text'||nodes[i].type==='image'){addMS(nodes[i]);expandBtn(nodes[i].id)}}renderConnections();switchPage('create');showToast('Loaded: '+p.name)}catch(e){showToast('Load failed','error')}}
 function delProj(n){try{var a=JSON.parse(localStorage.getItem('seedance_projects')||'[]');a.splice(n,1);localStorage.setItem('seedance_projects',JSON.stringify(a));goHome();showToast('Project deleted')}catch(e){}}
 // API settings functions
