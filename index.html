@@ -1345,10 +1345,10 @@ window.saveApiKey = saveApiKey;
 window.saveDeepSeekKey = saveDeepSeekKey;
 window.saveCurrentCanvas = saveCurrentCanvas;
 window.renameProject = renameProject;function goHome() {
-  switchPage('home');
-  // Auto-save if on canvas
+  // Auto-save BEFORE switching page (so page-create is still active)
   var cp = document.getElementById("page-create");
   if (cp && cp.classList.contains("active") && nodes.length > 0) { saveCurrentCanvas(); }
+  switchPage('home');
   
   var t = document.getElementById("home-templates");
   var p = document.getElementById("home-projects");
