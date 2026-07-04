@@ -615,6 +615,14 @@ function showMentions(nodeId, query, el) {
     }
   }
   dd.innerHTML = h2;
+  // Use event delegation for mention items
+  dd.onclick = function(e) {
+    var item = e.target.closest('.mention-item');
+    if (item) {
+      var refName = item.getAttribute('data-ref');
+      if (refName) insertMention(nodeId, refName);
+    }
+  };
   dd.style.display = 'block';
   // Move dropdown to body to avoid any overflow clipping
   if (dd.parentNode) dd.parentNode.removeChild(dd);
