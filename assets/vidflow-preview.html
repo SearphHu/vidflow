@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VidFlow — Brand Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #04040E;
+  color: #E0F0FF;
+  min-height: 100vh;
+  background-image: radial-gradient(ellipse at 20% 50%, rgba(0,240,255,0.03) 0%, transparent 60%), radial-gradient(ellipse at 80% 50%, rgba(124,58,237,0.04) 0%, transparent 60%);
+  background-attachment: fixed;
+}
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+  background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,240,255,0.008) 2px,rgba(0,240,255,0.008) 4px);
+}
+.container { max-width: 960px; margin: 0 auto; padding: 60px 24px; position: relative; z-index: 1; }
+
+h1 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 14px; font-weight: 600;
+  color: rgba(0,240,255,0.4);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+h2 {
+  font-family: 'Inter', sans-serif;
+  font-size: 16px; font-weight: 600;
+  color: rgba(128,184,224,0.5);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+.section { margin-bottom: 64px; }
+
+.logo-showcase {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 40px;
+  padding: 48px; border-radius: 16px;
+  background: rgba(8,8,30,0.6);
+  border: 1px solid rgba(0,240,255,0.06);
+  margin-bottom: 48px;
+}
+
+.logo-row { display: flex; align-items: center; gap: 48px; flex-wrap: wrap; justify-content: center; }
+.logo-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.logo-item-label {
+  font-size: 11px; font-weight: 500;
+  color: rgba(128,184,224,0.4);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.logo-item svg, .logo-item img { display: block; }
+
+.context-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.context-card {
+  padding: 32px; border-radius: 12px;
+  background: rgba(8,8,30,0.5);
+  border: 1px solid rgba(0,240,255,0.06);
+  display: flex; flex-direction: column; gap: 16px;
+}
+.context-card h3 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: rgba(0,240,255,0.3);
+}
+.context-preview {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(4,4,14,0.6);
+  padding: 16px 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,240,255,0.05);
+}
+.context-preview .brand-icon { width: 28px; height: 28px; }
+.context-preview .brand-text {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 16px; font-weight: 800;
+  background: linear-gradient(135deg,#00F0FF,#FF00FF);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.spec-table { width: 100%; border-collapse: collapse; }
+.spec-table td {
+  padding: 8px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(0,240,255,0.04);
+}
+.spec-table td:first-child {
+  color: rgba(128,184,224,0.4);
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 1px;
+  width: 140px;
+}
+.spec-table td:last-child { color: #E0F0FF; }
+
+@media (max-width: 640px) {
+  .context-grid { grid-template-columns: 1fr; }
+  .container { padding: 32px 16px; }
+  .logo-showcase { padding: 32px 20px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Full Logo -->
+  <div class="section">
+    <h1>VidFlow 品牌标志</h1>
+    <div class="logo-showcase">
+      <img src="vidflow-logo.svg" alt="VidFlow Full Logo" style="max-width: 100%; height: auto;">
+    </div>
+  </div>
+
+  <!-- Sizes -->
+  <div class="section">
+    <h2>尺寸变体</h2>
+    <div class="logo-row">
+      <div class="logo-item">
+        <img src="vidflow-icon.svg" width="64" height="64" alt="64x64">
+        <span class="logo-item-label">64px — Favicon</span>
+      </div>
+      <div class="logo-item">
+        <img src="vidflow-icon.svg" width="48" height="48" alt="48x48">
+        <span class="logo-item-label">48px — Login</span>
+      </div>
+      <div class="logo-item">
+        <img src="vidflow-icon.svg" width="32" height="32" alt="32x32">
+        <span class="logo-item-label">32px — Navbar</span>
+      </div>
+      <div class="logo-item">
+        <img src="vidflow-icon.svg" width="24" height="24" alt="24x24">
+        <span class="logo-item-label">24px — Small</span>
+      </div>
+      <div class="logo-item">
+        <img src="vidflow-icon.svg" width="16" height="16" alt="16x16">
+        <span class="logo-item-label">16px — Mini</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- In-context Previews -->
+  <div class="section">
+    <h2>应用场景</h2>
+    <div class="context-grid">
+      <div class="context-card">
+        <h3>导航栏 Navbar</h3>
+        <div class="context-preview">
+          <img src="vidflow-icon.svg" class="brand-icon" alt="">
+          <span class="brand-text">VidFlow</span>
+        </div>
+      </div>
+      <div class="context-card">
+        <h3>登录页 Logo</h3>
+        <div class="context-preview" style="justify-content:center;padding:24px;">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+            <img src="vidflow-icon.svg" width="48" height="48" alt="">
+            <span style="font-family:'Orbitron',sans-serif;font-size:24px;font-weight:800;background:linear-gradient(135deg,#00F0FF,#FF00FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">VidFlow</span>
+          </div>
+        </div>
+      </div>
+      <div class="context-card">
+        <h3>暗色背景 (Dark)</h3>
+        <div class="context-preview" style="background:#04040E;justify-content:center;padding:24px;">
+          <img src="vidflow-icon.svg" width="40" height="40" alt="">
+        </div>
+      </div>
+      <div class="context-card">
+        <h3>亮色背景 Light</h3>
+        <div class="context-preview" style="background:#1a1a2e;justify-content:center;padding:24px;">
+          <img src="vidflow-icon.svg" width="40" height="40" alt="">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Specs -->
+  <div class="section">
+    <h2>设计规格</h2>
+    <div class="logo-showcase" style="gap:0;">
+      <table class="spec-table">
+        <tr><td>品牌名称</td><td>VidFlow</td></tr>
+        <tr><td>风格定位</td><td>未来朋克 · Cyberpunk · 赛博文化</td></tr>
+        <tr><td>主色调</td><td><span style="display:inline-block;width:12px;height:12px;background:#00F0FF;border-radius:2px;vertical-align:middle;margin-right:6px;"></span>Cyan #00F0FF / <span style="display:inline-block;width:12px;height:12px;background:#FF00FF;border-radius:2px;vertical-align:middle;margin-right:6px;"></span>Magenta #FF00FF</td></tr>
+        <tr><td>辅助色</td><td>Purple #7C3AED / Green #06F0B0</td></tr>
+        <tr><td>图标造型</td><td>Hexagon 六边形 + 霓虹 V 字 + 数据流线路</td></tr>
+        <tr><td>文字字体</td><td>Orbitron (Headline) / Inter (Body)</td></tr>
+        <tr><td>文件格式</td><td>SVG — 矢量可缩放</td></tr>
+        <tr><td>使用位置</td><td>Favicon · Navbar · Login · Header · Branding</td></tr>
+      </table>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

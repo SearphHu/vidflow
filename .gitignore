@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+.env
+*.pyc
+__pycache__/
+.DS_Store
+Thumbs.db
+*.log
+# Local env files
+.env.local
+.env.production
+# Backups
+*backup*
+fix_modal.py
+proxy_server.py
+start_proxy.bat
+*.bat
+start_tunnel.bat

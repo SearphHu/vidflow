@@ -1,0 +1,338 @@
+﻿const NODE_TYPES = {
+  prompt: { color: '#F59E0B', title: 'Prompt', icon: 'P', inputs: [], outputs: ['text'], defaults: { prompt: '' } },
+  text: { color: '#8B5CF6', title: '文本生成', icon: 'T', inputs: ['prompt'], outputs: ['text'], defaults: {} },
+  image: { color: '#10B981', title: '图片生成', icon: 'I', inputs: ['prompt'], outputs: ['image_url'], defaults: {} },
+  video: { color: '#EC4899', title: '视频生成', icon: 'V', inputs: ['prompt', 'image_url'], outputs: ['video_url'], defaults: { model: 'seedance-2', duration: 5, motion: 5, resolution: '720x1280' } },
+  preview: { color: '#6B7280', title: '预览输出', icon: 'O', inputs: ['text', 'image_url', 'video_url'], outputs: [], defaults: {} }
+};
+const COLORS = { prompt: '#F59E0B', text: '#8B5CF6', image: '#10B981', video: '#EC4899', preview: '#6B7280' };
+const TYPE_NAMES = { prompt: 'Prompt', text: '文本生成', image: '图片生成', video: '视频生成', preview: '预览输出' };
+const TYPE_DESCS = { prompt: '输入 Prompt 文本', text: 'AI 生成文本', image: 'AI 生成图片', video: 'AI 生成视频', preview: '查看最终输出' };
+const CATEGORIES = ['全部', 'AI 视频', '动画', '电影感', '实验性', '人像', '风景', '3D'];
+const MODELS = [
+  { name: 'Seedance 2.0', desc: '最新的视频生成模型，支持高清视频生成', icon: 'S', color: '#EC4899', type: 'video', downloads: '128K' },
+  { name: 'Gen-3 Alpha', desc: '高质量视频生成，支持多种风格', icon: 'G', color: '#8B5CF6', type: 'video', downloads: '95K' },
+  { name: 'SDXL 1.0', desc: '高分辨率图像生成模型', icon: 'S', color: '#10B981', type: 'image', downloads: '210K' },
+  { name: 'Kling 1.5', desc: '快速视频生成，适合短视频创作', icon: 'K', color: '#F59E0B', type: 'video', downloads: '67K' },
+  { name: 'Midjourney V6', desc: '顶级图像生成质量', icon: 'M', color: '#3B82F6', type: 'image', downloads: '340K' },
+  { name: 'CogVideoX', desc: '开源视频生成模型', icon: 'C', color: '#EF4444', type: 'video', downloads: '43K' }
+];
+let nodes = [], connections = [], nodeIdCounter = 0, selectedNode = null;
+let connecting = { active: false, sourcePort: null, sourceNode: null };
+let canvasState = { x: 0, y: 0, scale: 1 };
+let isDraggingCanvas = false, dragStart = { x: 0, y: 0 };
+let outputVisible = true, currentCategory = '全部', currentSort = 'trending';
+let gallery = [];document.addEventListener('DOMContentLoaded', function () {
+  initCategories();
+  initModelCategories();
+  initPalette();
+  initCanvas();
+  renderConnections();
+  initPaletteDrop();
+  loadExploreVideos();
+  loadHomePage();
+  setupSearch();
+  initContextMenu();
+
+});
+function setupSearch() {
+  var inp = document.getElementById('globalSearch');
+  if (!inp) return;
+  inp.addEventListener('input', function () {
+    var q = this.value.trim().toLowerCase();
+    if (!q) { loadExploreVideos(); return; }
+    renderVideos(gallery.filter(function (v) { return v.title.toLowerCase().includes(q) || v.author.toLowerCase().includes(q); }));
+  });
+}
+function switchPage(name) {
+  document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
+  var pg = document.getElementById('page-' + name);
+  if (pg) pg.classList.add('active');
+  document.querySelectorAll('.nav-link').forEach(function (l) { l.classList.remove('active'); });
+  var links = document.querySelectorAll('.nav-link[data-page]');
+  for (var i = 0; i < links.length; i++) {
+    if (links[i].getAttribute('data-page') === name) { links[i].classList.add('active'); break; }
+  }
+  if (name === 'explore') { loadHomePage(); }
+
+}
+function initCategories() {
+  var c = document.getElementById('category-list');
+  if (!c) return;
+  var html = '';
+  for (var i = 0; i < CATEGORIES.length; i++) {
+    html += '<div class="sidebar-item' + (i === 0 ? ' active' : '') + '" onclick="selectCategory(this,\'' + CATEGORIES[i] + '\')"><span class="sidebar-dot"></span> ' + CATEGORIES[i] + '</div>';
+  }
+  c.innerHTML = html;
+}
+function selectCategory(el, cat) {
+  currentCategory = cat;
+  document.querySelectorAll('#category-list .sidebar-item').forEach(function (i) { i.classList.remove('active'); });
+  if (el) el.classList.add('active');
+  loadExploreVideos();
+}
+function setSort(el, sort) {
+  currentSort = sort;
+  document.querySelectorAll('.sidebar-items .sidebar-item').forEach(function (i) { i.classList.remove('active'); });
+  if (el) el.classList.add('active');
+  loadExploreVideos();
+}
+function switchExploreTab(el, tab) {
+  document.querySelectorAll('.explore-tabs .tab-btn').forEach(function (b) { b.classList.remove('active'); });
+  if (el) el.classList.add('active');
+}
+function generateGallery() {
+  gallery = [];
+  var titles = ['赛博朋克城市夜景', '水墨山水动画', 'AI 生成的梦幻世界', '未来都市掠影', '星空下的向日葵', '蒸汽波风格短片', '抽象艺术实验', '超现实梦境', '像素风动画', '手绘风格短片'];
+  var authors = ['创意工坊', 'AI 艺术实验室', '数字梦境', '像素画家', '视觉引擎', '生成艺术', '未来影像', '虚拟创作'];
+  var baseUrls = ['https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4','https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4','https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4','https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4','https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4'];
+  for (var i = 0; i < 16; i++) {
+    gallery.push({
+      id: 'v_' + i, title: titles[i % titles.length], author: authors[i % authors.length],
+      url: baseUrls[i % baseUrls.length], thumb: 'https://picsum.photos/600/338?random=' + (i + 100),
+      views: Math.floor(Math.random() * 50000) + 1000, likes: Math.floor(Math.random() * 5000) + 100,
+      duration: Math.floor(Math.random() * 30) + 5 + 's',
+      badge: i % 3 === 0 ? '精选' : (i % 3 === 1 ? '热门' : ''),
+      date: '2024-01-' + (String(i + 1).padStart(2, '0')),
+      desc: '这是使用 AI 技术生成的精彩视频内容。通过 Seedance Studio 平台，您可以轻松创建属于自己的 AI 视频作品。'
+    });
+  }
+}
+function loadExploreVideos() {
+  generateGallery();
+  var filtered = gallery;
+  if (currentSort === 'popular') filtered = filtered.slice().sort(function (a, b) { return b.likes - a.likes; });
+  else if (currentSort === 'latest') filtered = filtered.slice().sort(function (a, b) { return b.id.localeCompare(a.id); });
+  renderVideos(filtered);
+}function renderVideos(list) {
+  var grid = document.getElementById('video-grid');
+  if (!grid) return;
+  var html = '';
+  for (var i = 0; i < list.length; i++) {
+    var v = list[i];
+    html += '<div class="video-card" onclick="showDetail(' + v.id.replace('v_','') + ')">';
+    html += '<div class="video-thumb"><img src="' + v.thumb + '" alt="' + v.title + '" loading="lazy">';
+    html += '<div class="video-play-overlay"><div class="video-play-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="rgba(255,255,255,.8)" stroke="none"><polygon points="6 3 20 12 6 21 6 3"/></svg></div></div>';
+    if (v.badge) html += '<div class="video-badge">' + v.badge + '</div>';
+    html += '<div class="video-duration">' + v.duration + '</div></div>';
+    html += '<div class="video-info"><div class="video-title">' + v.title + '</div>';
+    html += '<div class="video-meta"><div class="video-author"><div class="video-avatar"></div><span class="video-author-name">' + v.author + '</span></div>';
+    html += '<div class="video-stats"><span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' + (v.views > 1000 ? Math.round(v.views/1000) + 'K' : v.views) + '</span>';
+    html += '<span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg>' + (v.likes > 1000 ? Math.round(v.likes/1000) + 'K' : v.likes) + '</span></div></div></div></div>';
+  }
+  grid.innerHTML = html;
+}
+function showDetail(idx) {
+  var v = gallery[idx];
+  if (!v) return;
+  var c = document.getElementById('detail-content');
+  if (!c) return;
+  var html = '<div class="detail-video"><video src="' + v.url + '" controls autoplay muted style="width:100%;height:100%;object-fit:cover"></video></div>';
+  html += '<div class="detail-body"><div class="detail-title">' + v.title + '</div>';
+  html += '<div class="detail-author"><div class="detail-avatar"></div><div><div class="detail-author-name">' + v.author + '</div><div class="detail-date">' + v.date + '</div></div></div>';
+  html += '<div class="detail-desc">' + v.desc + '</div>';
+  html += '<div class="detail-actions"><button class="detail-btn" onclick="closeDetail()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg> 点赞</button>';
+  html += '<button class="detail-btn" onclick="switchPage(\'create\');closeDetail()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> 重新创作</button></div></div>';
+  c.innerHTML = html;
+  document.getElementById('detail-overlay').classList.add('open');
+}
+function closeDetail() { document.getElementById('detail-overlay').classList.remove('open'); }
+function initModelCategories() {
+  var c = document.getElementById('model-categories');
+  if (!c) return;
+  var cats = ['全部', '视频生成', '图像生成', '热门推荐', '最新上线'];
+  var html = '';
+  for (var i = 0; i < cats.length; i++) {
+    html += '<div class="sidebar-item' + (i === 0 ? ' active' : '') + '" onclick="selectModelCategory(this)"><span class="sidebar-dot"></span> ' + cats[i] + '</div>';
+  }
+  c.innerHTML = html;
+}
+function selectModelCategory(el) {
+  document.querySelectorAll('#model-categories .sidebar-item').forEach(function (i) { i.classList.remove('active'); });
+  if (el) el.classList.add('active');
+  loadHomePage();
+}
+function switchModelTab(el, tab) {
+  document.querySelectorAll('#page-models .explore-tabs .tab-btn').forEach(function (b) { b.classList.remove('active'); });
+  if (el) el.classList.add('active');
+  loadModels(tab === 'image' ? 'image' : 'video');
+}
+function loadModels(filter) {
+  var grid = document.getElementById('model-grid');
+  if (!grid) return;
+  var list = MODELS;
+  if (filter) list = list.filter(function (m) { return m.type === filter; });
+  var html = '';
+  for (var i = 0; i < list.length; i++) {
+    var m = list[i];
+    html += '<div class="model-card" onclick="switchPage(\'create\')">';
+    html += '<div class="model-thumb"><div class="model-icon" style="background:' + m.color + '">' + m.icon + '</div></div>';
+    html += '<div class="model-info"><div class="model-name">' + m.name + '</div><div class="model-desc">' + m.desc + '</div><div class="model-meta"><span>' + (m.type === 'video' ? '视频' : '图像') + '模型</span><span>' + m.downloads + ' 下载</span></div></div></div>';
+  }
+  grid.innerHTML = html;
+}function initPalette() {
+  var p = document.getElementById('palette-items');
+  if (!p) return;
+  var html = '';
+  var keys = ['prompt', 'text', 'image', 'video', 'preview'];
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i];
+    html += '<div class="palette-item" draggable="true" data-type="' + k + '" ondragstart="onPaletteDrag(event)" onclick="onPaletteClick(\'' + k + '\',event)">';
+    html += '<div class="palette-dot" style="background:' + COLORS[k] + '"></div>';
+    html += '<div><div class="palette-name">' + TYPE_NAMES[k] + '</div><div class="palette-desc">' + TYPE_DESCS[k] + '</div></div></div>';
+  }
+  p.innerHTML = html;
+}
+function onPaletteDrag(e) {
+  var el = e.target.closest('.palette-item');
+  if (el) e.dataTransfer.setData('text/plain', el.dataset.type);
+  e.dataTransfer.effectAllowed = 'copy';
+}
+function onPaletteClick(type, e) {
+  var vp = document.getElementById('canvas-viewport');
+  if (vp) {
+    var rect = vp.getBoundingClientRect();
+    var x = (rect.width / 2 - 140) / (canvasState.scale || 1);
+    var y = (rect.height / 2 - 60) / (canvasState.scale || 1);
+    addNode(type, x, y);
+    showToast(TYPE_NAMES[type] + ' 已添加到画布');
+  }
+}
+function initPaletteDrop() {
+  var vp = document.getElementById('canvas-viewport');
+  if (!vp) return;
+  vp.addEventListener('dragover', function (e) { e.preventDefault(); });
+  vp.addEventListener('drop', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    var type = e.dataTransfer.getData('text/plain');
+    if (!type) return;
+    var rect = vp.getBoundingClientRect();
+    if (!rect || rect.width === 0) return;
+    var x = (e.clientX - rect.left - (canvasState.x || 0)) / (canvasState.scale || 1);
+    var y = (e.clientY - rect.top - (canvasState.y || 0)) / (canvasState.scale || 1);
+    addNode(type, x, y);
+  });
+}
+function initCanvas() {
+  var vp = document.getElementById('canvas-viewport');
+  if (!vp) return;
+  vp.addEventListener('mousedown', function (e) {
+    if (e.target === vp || (e.target.classList && e.target.classList.contains('canvas-grid'))) {
+      isDraggingCanvas = true;
+      dragStart = { x: e.clientX - (canvasState.x || 0), y: e.clientY - (canvasState.y || 0) };
+      vp.style.cursor = 'grabbing';
+    }
+  });
+  document.addEventListener('mousemove', function (e) {
+    if (isDraggingCanvas) {
+      canvasState.x = e.clientX - dragStart.x;
+      canvasState.y = e.clientY - dragStart.y;
+      updateTransform();
+    }
+  });
+  document.addEventListener('mouseup', function () {
+    isDraggingCanvas = false;
+    var cv = document.getElementById('canvas-viewport');
+    if (cv) cv.style.cursor = 'grab';
+  });
+  vp.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    var d = e.deltaY > 0 ? 0.9 : 1.1;
+    canvasState.scale = Math.max(0.2, Math.min(3, (canvasState.scale || 1) * d));
+    updateTransform();
+  }, { passive: false });
+  updateTransform();
+}
+function updateTransform() {
+  var vp = document.getElementById('canvas-viewport');
+  if (vp) {
+    vp.style.transform = 'translate(' + (canvasState.x || 0) + 'px,' + (canvasState.y || 0) + 'px) scale(' + (canvasState.scale || 1) + ')';
+    var z = document.getElementById('zoom-level');
+    if (z) z.textContent = Math.round((canvasState.scale || 1) * 100) + '%';
+  }
+}
+function zoomIn() { canvasState.scale = Math.min(3, (canvasState.scale || 1) * 1.2); updateTransform(); }
+function zoomOut() { canvasState.scale = Math.max(0.2, (canvasState.scale || 1) / 1.2); updateTransform(); }
+function fitView() { canvasState = { x: 0, y: 0, scale: 1 }; updateTransform(); }
+function addNode(type, x, y) {
+  var posX = x, posY = y;
+  if (posX == null) {
+    var vp = document.getElementById('canvas-viewport');
+    if (vp) { var r = vp.getBoundingClientRect(); if (r && r.width > 0) { posX = r.width / 2 - 140; posY = r.height / 2 - 60; } else { posX = 300; posY = 200; } }
+    else { posX = 300; posY = 200; }
+  }
+  if (posX == null || isNaN(posX) || posX < 0) posX = 300;
+  if (posY == null || isNaN(posY) || posY < 0) posY = 200;
+  var id = 'node_' + (++nodeIdCounter);
+  var def = NODE_TYPES[type];
+  if (!def) { showToast('未知节点类型', 'error'); return null; }
+  var nodeData = JSON.parse(JSON.stringify(def.defaults || {}));
+  var node = {
+    id: id, type: type, data: nodeData, x: posX, y: posY, el: null, width: 280, lastResult: null,
+    getInput: function (portName) {
+      for (var ci = 0; ci < connections.length; ci++) {
+        if (connections[ci].to === this.id && connections[ci].toPort === portName) {
+          for (var ni = 0; ni < nodes.length; ni++) {
+            if (nodes[ni].id === connections[ci].from) {
+              if (nodes[ni].lastResult) return nodes[ni].lastResult[connections[ci].fromPort] || nodes[ni].lastResult.text || null;
+              break;
+            }
+          }
+        }
+      }
+      return null;
+    }
+  };
+  nodes.push(node);
+  renderNode(node);
+  if (type === 'video') renderRefs(node.id);
+  showToast('已添加 ' + (TYPE_NAMES[type] || type));
+  return node;
+}
+function renderPorts(node) {
+  var def = NODE_TYPES[node.type];
+  if (!def) return '';
+  var html = '';
+  if (def.inputs) {
+    for (var i = 0; i < def.inputs.length; i++) {
+      var p = def.inputs[i];
+      html += '<div class="port side-port side-port-input" title="' + p + '" data-node="' + node.id + '" data-port="' + p + '" onmousedown="event.stopPropagation();startConnection(\'' + node.id + '\',\'' + p + '\',event)"><div class="side-port-dot port-dot input"></div></div>';
+    }
+  }
+  if (def.outputs) {
+    for (var i = 0; i < def.outputs.length; i++) {
+      var p = def.outputs[i];
+      html += '<div class="port side-port side-port-output" title="' + p + '" data-node="' + node.id + '" data-port="' + p + '" onmousedown="event.stopPropagation();startConnection(\'' + node.id + '\',\'' + p + '\',event)"><div class="side-port-dot port-dot output"></div></div>';
+    }
+  }
+  return html;
+}
+function initContextMenu() {
+  var vp = document.getElementById('canvas-viewport');
+  if (!vp) return;
+  vp.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.target.closest('.workflow-node')) return;
+    var menu = document.getElementById('context-menu');
+    if (!menu) return;
+    menu.style.left = e.clientX + 'px';
+    menu.style.top = e.clientY + 'px';
+    menu.style.display = 'block';
+    // Save position for addNode
+    var rect = vp.getBoundingClientRect();
+    if (rect && rect.width > 0) {
+      menu._canvasX = (e.clientX - rect.left - (canvasState.x || 0)) / (canvasState.scale || 1);
+      menu._canvasY = (e.clientY - rect.top - (canvasState.y || 0)) / (canvasState.scale || 1);
+    }
+  });
+  document.addEventListener('mousedown', function(e) {
+    if (!e.target.closest('.context-menu')) closeContextMenu();
+  });
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeContextMenu(); });
+}
+function closeCM() { closeContextMenu(); }
+function closeContextMenu() {
+  var m = document.getElementById('context-menu');
+  if (m) m.style.display = 'none';
+}

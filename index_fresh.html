@@ -1,0 +1,139 @@
+<script>document.title = 'SCRIPT EXECUTED';</script><!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Seedance Studio - AI Video Generation</title>
+<link rel="stylesheet" href="css/style.css?v=5">
+</head>
+<body>
+<nav class="navbar">
+<div class="nav-container">
+<div class="nav-left">
+<a href="#" class="nav-brand" onclick="switchPage('home')">
+<svg class="brand-icon" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="url(#bg)"/><path d="M8 22V10l8 6 8-6v12" stroke="#fff" stroke-width="2.5" fill="none" stroke-linejoin="round"/><defs><linearGradient id="bg" x1="0" y1="0" x2="32" y2="32"><stop offset="0%" stop-color="#8B5CF6"/><stop offset="100%" stop-color="#EC4899"/></linearGradient></defs></svg>
+<span class="brand-text">Seedance</span>
+</a>
+<div class="nav-links">
+<a href="#" class="nav-link" data-page="home" onclick="switchPage('home')">首页</a>
+<a href="#" class="nav-link active" data-page="create" onclick="switchPage('create')">创作</a>
+</div>
+</div>
+<div class="nav-right">
+<div class="api-key-container" style="position:relative;display:inline-block">
+  <button class="btn btn-ghost btn-sm" onclick="toggleApiInput()" title="API 设置" style="padding:4px 8px;font-size:12px">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+  </button>
+  <div class="api-input-popup" id="api-input-popup" style="display:none;position:absolute;top:100%;right:0;z-index:999;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;min-width:340px;box-shadow:0 8px 32px rgba(0,0,0,.5)">
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px">火山方舟 API Key</div>
+    <input type="password" id="api-key-input" placeholder="输入 API Key..." style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:12px;outline:none;margin-bottom:8px">
+    <div style="display:flex;gap:6px">
+      <button onclick="saveApiKey()" class="btn btn-primary btn-sm" style="flex:1">保存</button>
+      <button onclick="document.getElementById('api-input-popup').style.display='none'" class="btn btn-ghost btn-sm">取消</button>
+    </div>
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+  <div style="font-size:13px;font-weight:600;margin-bottom:8px">DeepSeek API Key</div>
+  <input type="password" id="deepseek-key-input" placeholder="输入 DeepSeek API Key..." style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:12px;outline:none;margin-bottom:8px">
+  <button onclick="saveDeepSeekKey()" class="btn btn-primary btn-sm" style="width:100%">保存</button>
+</div>
+<div style="font-size:10px;color:var(--text3);margin-top:6px">Key 保存在本地浏览器</div>
+  </div>
+</div>
+<button class="btn btn-primary btn-sm" onclick="switchPage('create')">+ 创作视频</button>
+</div>
+</div>
+</nav>
+
+<div class="app-root">
+<section id="page-home" class="page">
+<div class="home-container">
+<div class="home-hero">
+<h1 class="home-title">Seedance Studio</h1>
+<p class="home-subtitle">AI 视频生成工作流编辑器 — 节点式创作，无限可能</p>
+<button class="btn btn-primary btn-lg" onclick="switchPage('create')">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> 创建新项目
+</button>
+</div>
+<div class="home-section">
+<div class="home-section-title">快速开始</div>
+<div class="home-grid" id="home-templates"></div>
+</div>
+<div class="home-section">
+<div class="home-section-title">最近项目</div>
+<div class="home-grid" id="home-projects"></div>
+</div>
+</div>
+</section>
+
+<section id="page-create" class="page active">
+<div class="create-layout">
+<div class="node-palette">
+<div class="palette-header"><h3>节点</h3></div>
+<div class="palette-items" id="palette-items"></div>
+</div>
+<div class="canvas-wrapper" id="canvas-wrapper">
+<div class="canvas-viewport" id="canvas-viewport">
+<svg class="connections-layer" id="connections-layer"></svg>
+<div class="canvas-grid"></div>
+<div class="nodes-layer" id="nodes-layer"></div>
+</div>
+<div class="canvas-controls">
+<button class="ctrl-btn" onclick="zoomIn()" title="放大"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></button>
+<span class="zoom-level" id="zoom-level">100%</span>
+<button class="ctrl-btn" onclick="zoomOut()" title="缩小"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></button>
+<div class="ctrl-divider"></div>
+<button class="ctrl-btn" onclick="fitView()" title="适应画布"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg></button>
+<div class="ctrl-divider"></div>
+<button class="ctrl-btn" onclick="executeWorkflow()" title="运行工作流" style="color:#10B981"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
+</div>
+</div>
+</div>
+</section>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<div class="context-menu" id="context-menu" style="display:none">
+<div class="context-menu-item" onclick="closeCM();addNode('prompt')"><span class="cm-dot" style="background:#F59E0B"></span> 提示词</div>
+<div class="context-menu-item" onclick="closeCM();addNode('text')"><span class="cm-dot" style="background:#8B5CF6"></span> 文本生成</div>
+<div class="context-menu-item" onclick="closeCM();addNode('image')"><span class="cm-dot" style="background:#10B981"></span> 图片生成</div>
+<div class="context-menu-item" onclick="closeCM();addNode('video')"><span class="cm-dot" style="background:#EC4899"></span> 视频生成</div>
+<div class="cm-divider"></div>
+<div class="context-menu-item" onclick="closeCM();uploadFile('image')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> 上传图片</div>
+<div class="context-menu-item" onclick="closeCM();uploadFile('video')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg> 上传视频</div>
+</div>
+<input type="file" id="file-upload-image" accept="image/*" style="display:none" onchange="handleFileUpload(event,'image')">
+<input type="file" id="file-upload-video" accept="video/*" style="display:none" onchange="handleFileUpload(event,'video')">
+
+<script src="js/api_final.js"></script>
+<script src="js/app_final.js"></script>
+<script>
+(function(){
+  if(typeof SeedanceAPI==='undefined')return;
+  if(!localStorage.getItem('seedance_api_key')&&SeedanceAPI.apiKey)SeedanceAPI.setApiKey(SeedanceAPI.apiKey);
+  if(!localStorage.getItem('deepseek_api_key')&&SeedanceAPI.deepseekKey)SeedanceAPI.setDeepSeekKey(SeedanceAPI.deepseekKey);
+})();
+function toggleApiInput(){
+  var popup=document.getElementById('api-input-popup');
+  if(!popup)return;
+  if(popup.style.display==='block'){popup.style.display='none';return}
+  var el=document.getElementById('api-key-input');if(el)el.value=localStorage.getItem('seedance_api_key')||'';
+  var dkEl=document.getElementById('deepseek-key-input');if(dkEl)dkEl.value=localStorage.getItem('deepseek_api_key')||'';
+  popup.style.display='block'
+}
+function saveApiKey(){
+  var k=document.getElementById('api-key-input');
+  if(!k||!k.value.trim())return;
+  SeedanceAPI.setApiKey(k.value.trim());
+  var p2=document.getElementById('api-input-popup');if(p2)p2.style.display='none';
+  if(typeof showToast==='function')showToast('API Key 已保存');
+}
+function saveDeepSeekKey(){
+  var k=document.getElementById('deepseek-key-input');
+  if(!k||!k.value.trim())return;
+  SeedanceAPI.setDeepSeekKey(k.value.trim());
+  var p3=document.getElementById('api-input-popup');if(p3)p3.style.display='none';
+  if(typeof showToast==='function')showToast('DeepSeek Key 已保存');
+}
+</script>
+</body>
+</html>

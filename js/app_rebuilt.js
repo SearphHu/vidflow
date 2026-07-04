@@ -1,0 +1,710 @@
+﻿const NODE_TYPES = {
+  prompt: { color: '#F59E0B', title: 'Prompt', icon: 'P', inputs: [], outputs: ['text'], defaults: { prompt: '' } },
+  text: { color: '#8B5CF6', title: '文本生成', icon: 'T', inputs: ['prompt'], outputs: ['text'], defaults: {} },
+  image: { color: '#10B981', title: '图片生成', icon: 'I', inputs: ['prompt'], outputs: ['image_url'], defaults: {} },
+  video: { color: '#EC4899', title: '视频生成', icon: 'V', inputs: ['prompt', 'image_url'], outputs: ['video_url'], defaults: { model: 'seedance-2', duration: 5, motion: 5, resolution: '720x1280' } },
+  preview: { color: '#6B7280', title: '预览输出', icon: 'O', inputs: ['text', 'image_url', 'video_url'], outputs: [], defaults: {} }
+};
+const COLORS = { prompt: '#F59E0B', text: '#8B5CF6', image: '#10B981', video: '#EC4899', preview: '#6B7280' };
+const TYPE_NAMES = { prompt: 'Prompt', text: '文本生成', image: '图片生成', video: '视频生成', preview: '预览输出' };
+const TYPE_DESCS = { prompt: '输入 Prompt 文本', text: 'AI 生成文本', image: 'AI 生成图片', video: 'AI 生成视频', preview: '查看最终输出' };
+const CATEGORIES = ['全部', 'AI 视频', '动画', '电影感', '实验性', '人像', '风景', '3D'];
+const MODELS = [
+  { name: 'Seedance 2.0', desc: '最新的视频生成模型，支持高清视频生成', icon: 'S', color: '#EC4899', type: 'video', downloads: '128K' },
+  { name: 'Gen-3 Alpha', desc: '高质量视频生成，支持多种风格', icon: 'G', color: '#8B5CF6', type: 'video', downloads: '95K' },
+  { name: 'SDXL 1.0', desc: '高分辨率图像生成模型', icon: 'S', color: '#10B981', type: 'image', downloads: '210K' },
+  { name: 'Kling 1.5', desc: '快速视频生成，适合短视频创作', icon: 'K', color: '#F59E0B', type: 'video', downloads: '67K' },
+  { name: 'Midjourney V6', desc: '顶级图像生成质量', icon: 'M', color: '#3B82F6', type: 'image', downloads: '340K' },
+  { name: 'CogVideoX', desc: '开源视频生成模型', icon: 'C', color: '#EF4444', type: 'video', downloads: '43K' }
+];
+let nodes = [], connections = [], nodeIdCounter = 0, selectedNode = null;
+let connecting = { active: false, sourcePort: null, sourceNode: null };
+let canvasState = { x: 0, y: 0, scale: 1 };
+let isDraggingCanvas = false, dragStart = { x: 0, y: 0 };
+let outputVisible = true, currentCategory = '全部', currentSort = 'trending';
+let gallery = [];document.addEventListener('DOMContentLoaded', function () {
+  initCategories();
+  initModelCategories();
+  initPalette();
+  initCanvas();
+  renderConnections();
+  initPaletteDrop();
+  loadExploreVideos();
+  loadHomePage();
+  setupSearch();
+  initContextMenu();
+
+});
+function setupSearch() {
+  var inp = document.getElementById('globalSearch');
+  if (!inp) return;
+  inp.addEventListener('input', function () {
+    var q = this.value.trim().toLowerCase();
+    if (!q) { loadExploreVideos(); return; }
+    renderVideos(gallery.filter(function (v) { return v.title.toLowerCase().includes(q) || v.author.toLowerCase().includes(q); }));
+  });
+}
+function switchPage(name) {
+  document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
+  var pg = document.getElementById('page-' + name);
+  if (pg) pg.classList.add('active');
+  document.querySelectorAll('.nav-link').forEach(function (l) { l.classList.remove('active'); });
+  var links = document.querySelectorAll('.nav-link[data-page]');
+  for (var i = 0; i < links.length; i++) {
+    if (links[i].getAttribute('data-page') === name) { links[i].classList.add('active'); break; }
+  }
+  if (name === 'explore') { loadHomePage(); }
+
+}
+function initCategories() {
+  var c = document.getElementById('category-list');
+  if (!c) return;
+  var html = '';
+  for (var i = 0; i < CATEGORIES.length; i++) {
+    html += '<div class="sidebar-item' + (i === 0 ? ' active' : '') + '" onclick="selectCategory(this,\'' + CATEGORIES[i] + '\')"><span class="sidebar-dot"></span> ' + CATEGORIES[i] + '</div>';
+  }
+  c.innerHTML = html;
+}
+function selectCategory(el, cat) {
+  currentCategory = cat;
+  document.querySelectorAll('#category-list .sidebar-item').forEach(function (i) { i.classList.remove('active'); });
+  if (el) el.classList.add('active');
+  loadExploreVideos();
+}
+function setSort(el, sort) {
+  currentSort = sort;
+  document.querySelectorAll('.sidebar-items .sidebar-item').forEach(function (i) { i.classList.remove('active'); });
+  if (el) el.classList.add('active');
+  loadExploreVideos();
+}
+function switchExploreTab(el, tab) {
+  document.querySelectorAll('.explore-tabs .tab-btn').forEach(function (b) { b.classList.remove('active'); });
+  if (el) el.classList.add('active');
+}
+function generateGallery() {
+  gallery = [];
+  var titles = ['赛博朋克城市夜景', '水墨山水动画', 'AI 生成的梦幻世界', '未来都市掠影', '星空下的向日葵', '蒸汽波风格短片', '抽象艺术实验', '超现实梦境', '像素风动画', '手绘风格短片'];
+  var authors = ['创意工坊', 'AI 艺术实验室', '数字梦境', '像素画家', '视觉引擎', '生成艺术', '未来影像', '虚拟创作'];
+  var baseUrls = ['https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4','https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4','https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4','https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4','https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4'];
+  for (var i = 0; i < 16; i++) {
+    gallery.push({
+      id: 'v_' + i, title: titles[i % titles.length], author: authors[i % authors.length],
+      url: baseUrls[i % baseUrls.length], thumb: 'https://picsum.photos/600/338?random=' + (i + 100),
+      views: Math.floor(Math.random() * 50000) + 1000, likes: Math.floor(Math.random() * 5000) + 100,
+      duration: Math.floor(Math.random() * 30) + 5 + 's',
+      badge: i % 3 === 0 ? '精选' : (i % 3 === 1 ? '热门' : ''),
+      date: '2024-01-' + (String(i + 1).padStart(2, '0')),
+      desc: '这是使用 AI 技术生成的精彩视频内容。通过 Seedance Studio 平台，您可以轻松创建属于自己的 AI 视频作品。'
+    });
+  }
+}
+function loadExploreVideos() {
+  generateGallery();
+  var filtered = gallery;
+  if (currentSort === 'popular') filtered = filtered.slice().sort(function (a, b) { return b.likes - a.likes; });
+  else if (currentSort === 'latest') filtered = filtered.slice().sort(function (a, b) { return b.id.localeCompare(a.id); });
+  renderVideos(filtered);
+}function renderVideos(list) {
+  var grid = document.getElementById('video-grid');
+  if (!grid) return;
+  var html = '';
+  for (var i = 0; i < list.length; i++) {
+    var v = list[i];
+    html += '<div class="video-card" onclick="showDetail(' + v.id.replace('v_','') + ')">';
+    html += '<div class="video-thumb"><img src="' + v.thumb + '" alt="' + v.title + '" loading="lazy">';
+    html += '<div class="video-play-overlay"><div class="video-play-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="rgba(255,255,255,.8)" stroke="none"><polygon points="6 3 20 12 6 21 6 3"/></svg></div></div>';
+    if (v.badge) html += '<div class="video-badge">' + v.badge + '</div>';
+    html += '<div class="video-duration">' + v.duration + '</div></div>';
+    html += '<div class="video-info"><div class="video-title">' + v.title + '</div>';
+    html += '<div class="video-meta"><div class="video-author"><div class="video-avatar"></div><span class="video-author-name">' + v.author + '</span></div>';
+    html += '<div class="video-stats"><span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' + (v.views > 1000 ? Math.round(v.views/1000) + 'K' : v.views) + '</span>';
+    html += '<span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg>' + (v.likes > 1000 ? Math.round(v.likes/1000) + 'K' : v.likes) + '</span></div></div></div></div>';
+  }
+  grid.innerHTML = html;
+}
+function showDetail(idx) {
+  var v = gallery[idx];
+  if (!v) return;
+  var c = document.getElementById('detail-content');
+  if (!c) return;
+  var html = '<div class="detail-video"><video src="' + v.url + '" controls autoplay muted style="width:100%;height:100%;object-fit:cover"></video></div>';
+  html += '<div class="detail-body"><div class="detail-title">' + v.title + '</div>';
+  html += '<div class="detail-author"><div class="detail-avatar"></div><div><div class="detail-author-name">' + v.author + '</div><div class="detail-date">' + v.date + '</div></div></div>';
+  html += '<div class="detail-desc">' + v.desc + '</div>';
+  html += '<div class="detail-actions"><button class="detail-btn" onclick="closeDetail()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg> 点赞</button>';
+  html += '<button class="detail-btn" onclick="switchPage(\'create\');closeDetail()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> 重新创作</button></div></div>';
+  c.innerHTML = html;
+  document.getElementById('detail-overlay').classList.add('open');
+}
+function closeDetail() { document.getElementById('detail-overlay').classList.remove('open'); }
+function initModelCategories() {
+  var c = document.getElementById('model-categories');
+  if (!c) return;
+  var cats = ['全部', '视频生成', '图像生成', '热门推荐', '最新上线'];
+  var html = '';
+  for (var i = 0; i < cats.length; i++) {
+    html += '<div class="sidebar-item' + (i === 0 ? ' active' : '') + '" onclick="selectModelCategory(this)"><span class="sidebar-dot"></span> ' + cats[i] + '</div>';
+  }
+  c.innerHTML = html;
+}
+function selectModelCategory(el) {
+  document.querySelectorAll('#model-categories .sidebar-item').forEach(function (i) { i.classList.remove('active'); });
+  if (el) el.classList.add('active');
+  loadHomePage();
+}
+function switchModelTab(el, tab) {
+  document.querySelectorAll('#page-models .explore-tabs .tab-btn').forEach(function (b) { b.classList.remove('active'); });
+  if (el) el.classList.add('active');
+  loadModels(tab === 'image' ? 'image' : 'video');
+}
+function loadModels(filter) {
+  var grid = document.getElementById('model-grid');
+  if (!grid) return;
+  var list = MODELS;
+  if (filter) list = list.filter(function (m) { return m.type === filter; });
+  var html = '';
+  for (var i = 0; i < list.length; i++) {
+    var m = list[i];
+    html += '<div class="model-card" onclick="switchPage(\'create\')">';
+    html += '<div class="model-thumb"><div class="model-icon" style="background:' + m.color + '">' + m.icon + '</div></div>';
+    html += '<div class="model-info"><div class="model-name">' + m.name + '</div><div class="model-desc">' + m.desc + '</div><div class="model-meta"><span>' + (m.type === 'video' ? '视频' : '图像') + '模型</span><span>' + m.downloads + ' 下载</span></div></div></div>';
+  }
+  grid.innerHTML = html;
+}function initPalette() {
+  var p = document.getElementById('palette-items');
+  if (!p) return;
+  var html = '';
+  var keys = ['prompt', 'text', 'image', 'video', 'preview'];
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i];
+    html += '<div class="palette-item" draggable="true" data-type="' + k + '" ondragstart="onPaletteDrag(event)" onclick="onPaletteClick(\'' + k + '\',event)">';
+    html += '<div class="palette-dot" style="background:' + COLORS[k] + '"></div>';
+    html += '<div><div class="palette-name">' + TYPE_NAMES[k] + '</div><div class="palette-desc">' + TYPE_DESCS[k] + '</div></div></div>';
+  }
+  p.innerHTML = html;
+}
+function onPaletteDrag(e) {
+  var el = e.target.closest('.palette-item');
+  if (el) e.dataTransfer.setData('text/plain', el.dataset.type);
+  e.dataTransfer.effectAllowed = 'copy';
+}
+function onPaletteClick(type, e) {
+  var vp = document.getElementById('canvas-viewport');
+  if (vp) {
+    var rect = vp.getBoundingClientRect();
+    var x = (rect.width / 2 - 140) / (canvasState.scale || 1);
+    var y = (rect.height / 2 - 60) / (canvasState.scale || 1);
+    addNode(type, x, y);
+    showToast(TYPE_NAMES[type] + ' 已添加到画布');
+  }
+}
+function initPaletteDrop() {
+  var vp = document.getElementById('canvas-viewport');
+  if (!vp) return;
+  vp.addEventListener('dragover', function (e) { e.preventDefault(); });
+  vp.addEventListener('drop', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    var type = e.dataTransfer.getData('text/plain');
+    if (!type) return;
+    var rect = vp.getBoundingClientRect();
+    if (!rect || rect.width === 0) return;
+    var x = (e.clientX - rect.left - (canvasState.x || 0)) / (canvasState.scale || 1);
+    var y = (e.clientY - rect.top - (canvasState.y || 0)) / (canvasState.scale || 1);
+    addNode(type, x, y);
+  });
+}
+function initCanvas() {
+  var vp = document.getElementById('canvas-viewport');
+  if (!vp) return;
+  vp.addEventListener('mousedown', function (e) {
+    if (e.target === vp || (e.target.classList && e.target.classList.contains('canvas-grid'))) {
+      isDraggingCanvas = true;
+      dragStart = { x: e.clientX - (canvasState.x || 0), y: e.clientY - (canvasState.y || 0) };
+      vp.style.cursor = 'grabbing';
+    }
+  });
+  document.addEventListener('mousemove', function (e) {
+    if (isDraggingCanvas) {
+      canvasState.x = e.clientX - dragStart.x;
+      canvasState.y = e.clientY - dragStart.y;
+      updateTransform();
+    }
+  });
+  document.addEventListener('mouseup', function () {
+    isDraggingCanvas = false;
+    var cv = document.getElementById('canvas-viewport');
+    if (cv) cv.style.cursor = 'grab';
+  });
+  vp.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    var d = e.deltaY > 0 ? 0.9 : 1.1;
+    canvasState.scale = Math.max(0.2, Math.min(3, (canvasState.scale || 1) * d));
+    updateTransform();
+  }, { passive: false });
+  updateTransform();
+}
+function updateTransform() {
+  var vp = document.getElementById('canvas-viewport');
+  if (vp) {
+    vp.style.transform = 'translate(' + (canvasState.x || 0) + 'px,' + (canvasState.y || 0) + 'px) scale(' + (canvasState.scale || 1) + ')';
+    var z = document.getElementById('zoom-level');
+    if (z) z.textContent = Math.round((canvasState.scale || 1) * 100) + '%';
+  }
+}
+function zoomIn() { canvasState.scale = Math.min(3, (canvasState.scale || 1) * 1.2); updateTransform(); }
+function zoomOut() { canvasState.scale = Math.max(0.2, (canvasState.scale || 1) / 1.2); updateTransform(); }
+function fitView() { canvasState = { x: 0, y: 0, scale: 1 }; updateTransform(); }
+function addNode(type, x, y) {
+  var posX = x, posY = y;
+  if (posX == null) {
+    var vp = document.getElementById('canvas-viewport');
+    if (vp) { var r = vp.getBoundingClientRect(); if (r && r.width > 0) { posX = r.width / 2 - 140; posY = r.height / 2 - 60; } else { posX = 300; posY = 200; } }
+    else { posX = 300; posY = 200; }
+  }
+  if (posX == null || isNaN(posX) || posX < 0) posX = 300;
+  if (posY == null || isNaN(posY) || posY < 0) posY = 200;
+  var id = 'node_' + (++nodeIdCounter);
+  var def = NODE_TYPES[type];
+  if (!def) { showToast('未知节点类型', 'error'); return null; }
+  var nodeData = JSON.parse(JSON.stringify(def.defaults || {}));
+  var node = {
+    id: id, type: type, data: nodeData, x: posX, y: posY, el: null, width: 280, lastResult: null,
+    getInput: function (portName) {
+      for (var ci = 0; ci < connections.length; ci++) {
+        if (connections[ci].to === this.id && connections[ci].toPort === portName) {
+          for (var ni = 0; ni < nodes.length; ni++) {
+            if (nodes[ni].id === connections[ci].from) {
+              if (nodes[ni].lastResult) return nodes[ni].lastResult[connections[ci].fromPort] || nodes[ni].lastResult.text || null;
+              break;
+            }
+          }
+        }
+      }
+      return null;
+    }
+  };
+  nodes.push(node);
+  renderNode(node);
+  if (type === 'video') renderRefs(node.id);
+  showToast('已添加 ' + (TYPE_NAMES[type] || type));
+  return node;
+}
+function renderPorts(node) {
+  var def = NODE_TYPES[node.type];
+  if (!def) return '';
+  var html = '';
+  if (def.inputs) {
+    for (var i = 0; i < def.inputs.length; i++) {
+      var p = def.inputs[i];
+      html += '<div class="port side-port side-port-input" title="' + p + '" data-node="' + node.id + '" data-port="' + p + '" onmousedown="event.stopPropagation();startConnection(\'' + node.id + '\',\'' + p + '\',event)"><div class="side-port-dot port-dot input"></div></div>';
+    }
+  }
+  if (def.outputs) {
+    for (var i = 0; i < def.outputs.length; i++) {
+      var p = def.outputs[i];
+      html += '<div class="port side-port side-port-output" title="' + p + '" data-node="' + node.id + '" data-port="' + p + '" onmousedown="event.stopPropagation();startConnection(\'' + node.id + '\',\'' + p + '\',event)"><div class="side-port-dot port-dot output"></div></div>';
+    }
+  }
+  return html;
+}
+function initContextMenu() {
+  var vp = document.getElementById('canvas-viewport');
+  if (!vp) return;
+  vp.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.target.closest('.workflow-node')) return;
+    var menu = document.getElementById('context-menu');
+    if (!menu) return;
+    menu.style.left = e.clientX + 'px';
+    menu.style.top = e.clientY + 'px';
+    menu.style.display = 'block';
+    // Save position for addNode
+    var rect = vp.getBoundingClientRect();
+    if (rect && rect.width > 0) {
+      menu._canvasX = (e.clientX - rect.left - (canvasState.x || 0)) / (canvasState.scale || 1);
+      menu._canvasY = (e.clientY - rect.top - (canvasState.y || 0)) / (canvasState.scale || 1);
+    }
+  });
+  document.addEventListener('mousedown', function(e) {
+    if (!e.target.closest('.context-menu')) closeContextMenu();
+  });
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeContextMenu(); });
+}
+function closeCM() { closeContextMenu(); }
+function closeContextMenu() {
+  var m = document.getElementById('context-menu');
+  if (m) m.style.display = 'none';
+}
+
+// Add missing functions at end of file
+function onPromptInput(el, nodeId) {
+  updateNodeData(nodeId, 'prompt', el.value);
+  var text = el.value;
+  var atPos = text.lastIndexOf("@");
+  if (atPos >= 0 && (atPos === 0 || text[atPos-1] === ' ' || text[atPos-1] === "\n")) {
+    var query = text.substring(atPos + 1).toLowerCase();
+    showMentions(nodeId, query, el);
+  } else {
+    hideMentions(nodeId);
+  }
+}
+function onMentionKeydown(e, nodeId) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    var dd = document.getElementById('mention-' + nodeId);
+    if (dd && dd.style.display !== 'none' && dd.querySelector('.mention-item')) {
+      e.preventDefault();
+      selectMention(nodeId);
+    }
+  }
+  if (e.key === 'Escape') { hideMentions(nodeId); }
+}
+function showMentions(nodeId, query, el) {
+  var dd = document.getElementById('mention-' + nodeId);
+  if (!dd) return;
+  var node = getNode(nodeId);
+  if (!node) { hideMentions(nodeId); return; }
+  var refs = getConnectedRefs(nodeId);
+  if (refs.length === 0) { hideMentions(nodeId); return; }
+  var filtered = refs.filter(function(r) { return r.name.toLowerCase().indexOf(query) >= 0; });
+  if (filtered.length === 0) { hideMentions(nodeId); return; }
+  var html = '';
+  for (var i = 0; i < filtered.length; i++) {
+    var r = filtered[i];
+    html += '<div class="mention-item" data-ref="' + r.name + '" onclick="insertMention("' + nodeId + '","' + r.name + '")"><span class="mention-dot" style="background:' + r.color + '"></span>@' + r.name + ' <span class="mention-type">' + r.typeName + '</span></div>';
+  }
+  dd.innerHTML = html;
+  dd.style.display = 'block';
+  if (el) {
+    dd.style.bottom = '100%';
+    dd.style.left = '0';
+  }
+}
+function hideMentions(nodeId) {
+  var dd = document.getElementById('mention-' + nodeId);
+  if (dd) dd.style.display = 'none';
+}
+function selectMention(nodeId) {
+  var dd = document.getElementById('mention-' + nodeId);
+  if (!dd) return;
+  var first = dd.querySelector('.mention-item');
+  if (first) insertMention(nodeId, first.getAttribute('data-ref'));
+}
+function insertMention(nodeId, refName) {
+  var el = document.getElementById(nodeId + ' textarea');
+  if (!el) { hideMentions(nodeId); return; }
+  var text = el.value;
+  var atPos = text.lastIndexOf("@");
+  if (atPos >= 0) {
+    el.value = text.substring(0, atPos) + "@" + refName + ' ';
+    updateNodeData(nodeId, 'prompt', el.value);
+  }
+  hideMentions(nodeId);
+  el.focus();
+}
+function getConnectedRefs(nodeId) {
+  var refs = [];
+  for (var ci = 0; ci < connections.length; ci++) {
+    if (connections[ci].to === nodeId) {
+      for (var ni = 0; ni < nodes.length; ni++) {
+        if (nodes[ni].id === connections[ci].from) {
+          var def = NODE_TYPES[nodes[ni].type];
+          refs.push({
+            id: nodes[ni].id,
+            name: (def ? def.title : nodes[ni].type),
+            typeName: def ? (nodes[ni].type === 'prompt' ? '提示词' : nodes[ni].type === 'text' ? '文本' : nodes[ni].type === 'image' ? '图片' : '视频') : '',
+            color: def ? def.color : '#6B7280',
+            port: connections[ci].fromPort
+          });
+        }
+      }
+    }
+  }
+  return refs;
+}
+function renderRefs(nodeId) {
+  var refsEl = document.getElementById('refs-' + nodeId);
+  if (!refsEl) return;
+  var refs = getConnectedRefs(nodeId);
+  if (refs.length === 0) {
+    refsEl.innerHTML = '<span class="node-ref-empty">连接上游节点以引用</span>';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < refs.length; i++) {
+    var r = refs[i];
+    var cls = 'node-ref node-ref-' + (r.port || 'text');
+    html += '<span class="' + cls + '"><span class="node-ref-dot" style="background:' + r.color + '"></span>@' + r.name + '</span>';
+  }
+  refsEl.innerHTML = html;
+}
+
+// Override renderConnections to also update refs
+var _origRenderConnections = renderConnections;
+renderConnections = function() {
+  _origRenderConnections();
+  for (var ni = 0; ni < nodes.length; ni++) {
+    if (nodes[ni].type === 'video') {
+      renderRefs(nodes[ni].id);
+    }
+  }
+};
+
+// ===== FILE UPLOAD =====
+var _uploadType = '';
+function uploadFile(type) {
+  _uploadType = type;
+  var inp = document.getElementById('file-upload-' + type);
+  if (inp) inp.click();
+}
+function handleFileUpload(event, type) {
+  var file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+  var url = URL.createObjectURL(file);
+  var nodeType = type === 'image' ? 'image' : 'video';
+  var menu = document.getElementById('context-menu');
+  var cx = menu ? (menu._canvasX || 300) : 300;
+  var cy = menu ? (menu._canvasY || 200) : 200;
+  var node = addNode(nodeType, cx, cy);
+  if (node) {
+    node.data['_' + type + '_url'] = url;
+    node.data.prompt = file.name;
+    var bodyEl = node.el ? node.el.querySelector('.node-body') : null;
+    if (bodyEl) {
+      var preview = '';
+      if (type === 'image') {
+        preview = '<img src="' + url + '" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border-bottom:1px solid var(--border)" alt="' + file.name + '">';
+      } else {
+        preview = '<video src="' + url + '" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border-bottom:1px solid var(--border)" controls></video>';
+      }
+      bodyEl.innerHTML = preview + '<div class="node-result" style="margin:0;border-radius:0;padding:8px 12px;font-size:12px;color:var(--text2)">' + file.name + '</div>';
+    }
+    showToast('已上传: ' + file.name);
+  }
+}
+
+// AddNode override for context menu position
+;
+
+// ===== HOME PAGE =====
+function loadHomePage() {
+  var tpl = document.getElementById('home-templates');
+  if (tpl) {
+    var templates = [
+      { name: '空白项目', desc: '从零开始搭建工作流', icon: 'B', color: '#6B7280' },
+      { name: '文本生成视频', desc: '输入提示词直接生成视频', icon: 'T', color: '#8B5CF6' },
+      { name: '图片生成视频', desc: '上传图片并生成动画视频', icon: 'I', color: '#10B981' },
+      { name: '视频增强', desc: '对已有视频进行 AI 增强', icon: 'V', color: '#EC4899' },
+    ];
+    var html = '';
+    for (var i = 0; i < templates.length; i++) {
+      var t = templates[i];
+      html += '<div class="home-card" onclick="switchPage("create")"><div class="home-card-icon" style="background:' + t.color + '">' + t.icon + '</div><div class="home-card-title">' + t.name + '</div><div class="home-card-desc">' + t.desc + '</div></div>';
+    }
+    tpl.innerHTML = html;
+  }
+  var proj = document.getElementById('home-projects');
+  if (proj) {
+    var projects = getSavedProjects();
+    if (projects.length === 0) {
+      proj.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text3);font-size:14px">暂无保存的项目。创建一个新项目开始吧！</div>';
+    } else {
+      var h = '';
+      for (var i = 0; i < projects.length; i++) {
+        var p = projects[i];
+        h += '<div class="home-card" onclick="switchPage("create")"><div class="home-card-title">' + p.name + '</div><div class="home-card-desc">' + (p.desc || '') + '</div><div class="home-card-meta"><span>' + p.date + '</span><span>' + p.nodes + ' 个节点</span></div></div>';
+      }
+      proj.innerHTML = h;
+    }
+  }
+}
+function getSavedProjects() {
+  try { return JSON.parse(localStorage.getItem('seedance_projects') || '[]'); } catch(e) { return []; }
+}
+
+function cleanupConnection() {
+  var el = document.getElementById('temp-line');
+  if (el) el.remove();
+  if (connecting.active) {
+    connecting.active = false;
+    document.removeEventListener('mousemove', onConnectMove);
+    document.removeEventListener('mouseup', onConnectEnd);
+  }
+}
+function cleanUpTempLine() { var el = document.getElementById('temp-line'); if (el) el.remove(); }
+function showToast(msg, type) {
+  var c = document.getElementById('toast-container');
+  if (!c) return;
+  var t = document.createElement('div');
+  t.className = 'toast' + (type ? ' ' + type : '');
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(function () { t.style.opacity = '0'; t.style.transition = 'all 0.3s'; setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 300); }, 3000);
+}
+function getNode(id) { for (var i = 0; i < nodes.length; i++) { if (nodes[i].id === id) return nodes[i]; } return null; }
+function updateNodeData(nodeId, key, val) { for (var i = 0; i < nodes.length; i++) { if (nodes[i].id === nodeId) { nodes[i].data[key] = val; return; } } }
+
+function removeNode(id) {
+  if (!confirm('确定删除此节点？')) return;
+  for (var i = connections.length - 1; i >= 0; i--) { if (connections[i].from === id || connections[i].to === id) connections.splice(i, 1); }
+  var el = document.getElementById(id);
+  if (el && el.parentNode) el.parentNode.removeChild(el);
+  for (var i = 0; i < nodes.length; i++) { if (nodes[i].id === id) { nodes.splice(i, 1); break; } }
+  renderConnections();
+}
+
+function startConnection(nodeId, port, e) {
+  e.stopPropagation();
+  var target = e.target.closest('.side-port, .port-dot');
+  if (!target) return;
+  if (!nodeId || !port) { nodeId = target.getAttribute('data-node') || nodeId; port = target.getAttribute('data-port') || port; }
+  if (!nodeId || !port) return;
+  var dot = target.querySelector('.side-port-dot') || target;
+  var dRect = dot.getBoundingClientRect();
+  connecting = { active: true, sourceNode: nodeId, sourcePort: port, mouseX: dRect.left + dRect.width/2, mouseY: dRect.top + dRect.height/2, sourceX: dRect.left + dRect.width/2, sourceY: dRect.top + dRect.height/2 };
+  var svg = document.getElementById('connections-layer');
+  if (!svg) return;
+  var line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  line.id = 'temp-line'; line.setAttribute('class', 'temp-line');
+  svg.appendChild(line);
+  document.addEventListener('mousemove', onConnectMove);
+  document.addEventListener('mouseup', onConnectEnd);
+}
+function onConnectMove(e) { if (!connecting.active) return; connecting.mouseX = e.clientX; connecting.mouseY = e.clientY; updateTempLine(); }
+function onConnectEnd(e) {
+  if (!connecting.active) return;
+  var target = e.target.closest('.side-port, .port-dot');
+  if (!target) { cleanupConnection(); return; }
+  if (target.classList.contains('side-port-input') || (target.classList.contains('port-dot') && target.classList.contains('input'))) {
+    var toNode = target.getAttribute('data-node');
+    var toPort = target.getAttribute('data-port');
+    if (toNode && toNode !== connecting.sourceNode) {
+      for (var i = connections.length - 1; i >= 0; i--) { if (connections[i].to === toNode && connections[i].toPort === toPort) { connections.splice(i, 1); } }
+      connections.push({ from: connecting.sourceNode, fromPort: connecting.sourcePort, to: toNode, toPort: toPort });
+      renderConnections();
+      showToast('已连接');
+    }
+  }
+  var el = document.getElementById('temp-line'); if (el) el.remove();
+  connecting.active = false;
+  document.removeEventListener('mousemove', onConnectMove);
+  document.removeEventListener('mouseup', onConnectEnd);
+}
+function updateTempLine() {
+  var line = document.getElementById('temp-line');
+  if (!line || !connecting.active) return;
+  var vp = document.getElementById('canvas-viewport'); if (!vp) return;
+  var rect = vp.getBoundingClientRect();
+  var sx = (connecting.sourceX - rect.left - canvasState.x) / canvasState.scale;
+  var sy = (connecting.sourceY - rect.top - canvasState.y) / canvasState.scale;
+  var ex = ((connecting.mouseX || 0) - rect.left - canvasState.x) / canvasState.scale;
+  var ey = ((connecting.mouseY || 0) - rect.top - canvasState.y) / canvasState.scale;
+  var cx = (sx + ex) / 2;
+  line.setAttribute('d', 'M' + sx + ' ' + sy + ' C' + cx + ' ' + sy + ',' + cx + ' ' + ey + ',' + ex + ' ' + ey);
+}
+
+function renderConnections() {
+  var svg = document.getElementById('connections-layer');
+  if (!svg) return;
+  var vp = document.getElementById('canvas-viewport');
+  if (!vp) return;
+  var rect = vp.getBoundingClientRect();
+  var html = '';
+  for (var ci = 0; ci < connections.length; ci++) {
+    var c = connections[ci];
+    var fn = getNode(c.from), tn = getNode(c.to);
+    if (!fn || !tn || !fn.el || !tn.el) continue;
+    var fromPortEl = fn.el.querySelector('.side-port[data-port=\"' + c.fromPort + '\"] .side-port-dot');
+    var toPortEl = tn.el.querySelector('.side-port[data-port=\"' + c.toPort + '\"] .side-port-dot');
+    if (!fromPortEl || !toPortEl) continue;
+    var fpRect = fromPortEl.getBoundingClientRect();
+    var tpRect = toPortEl.getBoundingClientRect();
+    var sx = (fpRect.left + fpRect.width/2 - rect.left - canvasState.x) / canvasState.scale;
+    var sy = (fpRect.top + fpRect.height/2 - rect.top - canvasState.y) / canvasState.scale;
+    var ex = (tpRect.left + tpRect.width/2 - rect.left - canvasState.x) / canvasState.scale;
+    var ey = (tpRect.top + tpRect.height/2 - rect.top - canvasState.y) / canvasState.scale;
+    var mx = (sx + ex) / 2;
+    var color = c.fromPort === 'prompt' ? '#8B5CF6' : c.fromPort === 'image_url' ? '#10B981' : '#EC4899';
+    var midX = (sx + ex) / 2;
+    var midY = (sy + ey) / 2;
+    html += '<g class=\"conn-group\" data-idx=\"' + ci + '\">';
+    html += '<path d=\"M' + sx + ' ' + sy + ' C' + mx + ' ' + sy + ',' + mx + ' ' + ey + ',' + ex + ' ' + ey + '\" stroke=\"' + color + '\" stroke-width=\"8\" fill=\"none\" stroke-linecap=\"round\" opacity=\"0\" class=\"conn-hit\"/>';
+    html += '<path d=\"M' + sx + ' ' + sy + ' C' + mx + ' ' + sy + ',' + mx + ' ' + ey + ',' + ex + ' ' + ey + '\" stroke=\"' + color + '\" stroke-width=\"2.5\" fill=\"none\" stroke-linecap=\"round\" opacity=\"0.5\" class=\"conn-line\" style=\"cursor:pointer\"/>';
+    html += '<circle cx=\"' + ex + '\" cy=\"' + ey + '\" r=\"4\" fill=\"' + color + '\" opacity=\"0.6\"/>';
+    html += '<g class=\"conn-delete\" style=\"display:none;cursor:pointer\" onclick=\"removeConnection(' + ci + ')\" transform=\"translate(' + midX + ',' + (midY - 14) + ')\">';
+    html += '<circle cx=\"0\" cy=\"0\" r=\"12\" fill=\"var(--card)\" stroke=\"var(--border)\" stroke-width=\"1.5\"/>';
+    html += '<path d=\"M-4-3L4 3M4-3L-4 3\" stroke=\"#EF4444\" stroke-width=\"2.5\" stroke-linecap=\"round\"/>';
+    html += '</g></g>';
+  }
+  svg.innerHTML = html;
+  svg.querySelectorAll('.conn-group').forEach(function(g) {
+    var line = g.querySelector('.conn-line');
+    var delBtn = g.querySelector('.conn-delete');
+    var timer = null;
+    function showDel() { if (delBtn) delBtn.style.display = 'block'; }
+    function hideDel() { if (delBtn) delBtn.style.display = 'none'; }
+    function onOver() { if (timer) clearTimeout(timer); timer = setTimeout(showDel, 2000); if (line) line.setAttribute('stroke-width', '4'); }
+    function onOut() { if (timer) { clearTimeout(timer); timer = null; } hideDel(); if (line) line.setAttribute('stroke-width', '2.5'); }
+    g.addEventListener('mouseenter', onOver);
+    g.addEventListener('mouseleave', onOut);
+  });
+}
+function getNodeBodyHTML(node) {
+  var type = node.type;
+  var d = node.data || {};
+  var p = d.prompt || '';
+  var mot = d.motion || 5, res = d.resolution || '720x1280', dur = d.duration || 5;
+  switch (type) {
+    case 'prompt':
+      return '<div class="node-preview-area"><div class="node-preview-placeholder"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".4"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div><textarea id="' + node.id + '-textarea" placeholder="输入 Prompt 文本..." oninput="onPromptInput(this,\'' + node.id + '\')">' + p + '</textarea></div>';
+    case 'text':
+      return '<div class="node-preview-area"><div class="node-preview-placeholder"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".4"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><textarea placeholder="输入文本提示..." oninput="updateNodeData(\'' + node.id + '\',\'prompt\',this.value)">' + p + '</textarea></div>';
+    case 'image':
+      return '<div class="node-preview-area"><input type="text" placeholder="图片生成提示词..." value="' + p + '" oninput="updateNodeData(\'' + node.id + '\',\'prompt\',this.value)"></div><div class="node-params"><div class="param-row"><label>尺寸</label><select onchange="updateNodeData(\'' + node.id + '\',\'resolution\',this.value)"><option value="720x1280">720x1280</option><option value="1080x1920">1080x1920</option><option value="1024x1024">1024x1024</option></select></div></div>';
+    case 'video':
+      return '<div class="node-preview-area"><div class="node-refs" id="refs-' + node.id + '"><span class="node-ref-empty">连接上游节点以引用</span></div><textarea placeholder="输入视频提示词..." oninput="onPromptInput(this,\'' + node.id + '\')">' + p + '</textarea><div class="mention-dropdown" id="mention-' + node.id + '" style="display:none"></div></div><div class="node-params"><div class="param-row"><label>模型</label><select onchange="updateNodeData(\'' + node.id + '\',\'model\',this.value)"><option value="seedance-2" ' + (d.model === 'seedance-2' ? 'selected' : '') + '>Seedance 2.0</option><option value="gen3" ' + (d.model === 'gen3' ? 'selected' : '') + '>Gen-3 Alpha</option><option value="kling" ' + (d.model === 'kling' ? 'selected' : '') + '>Kling 1.5</option></select></div><div class="param-row"><label>时长(s)</label><input type="range" min="4" max="15" value="' + dur + '" oninput="updateNodeData(\'' + node.id + '\',\'duration\',parseInt(this.value));document.getElementById(\'dur-val-' + node.id + '\').textContent=this.value"><span class="param-val" id="dur-val-' + node.id + '">' + dur + '</span></div><div class="param-row"><label>运动强度</label><input type="range" min="1" max="10" value="' + mot + '" oninput="updateNodeData(\'' + node.id + '\',\'motion\',parseInt(this.value))"><span class="param-val">' + mot + '</span></div><div class="param-row"><label>分辨率</label><select onchange="updateNodeData(\'' + node.id + '\',\'resolution\',this.value)"><option value="720x1280" ' + (res === '720x1280' ? 'selected' : '') + '>720x1280</option><option value="1080x1920" ' + (res === '1080x1920' ? 'selected' : '') + '>1080x1920</option><option value="1024x1024" ' + (res === '1024x1024' ? 'selected' : '') + '>1024x1024</option></select></div></div><div class="node-result" id="result-' + node.id + '" style="display:none"></div>';
+    case 'preview':
+      return '<div class="node-preview-area"><div class="node-preview-placeholder"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".4"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div></div>';
+    default:
+      return '';
+  }
+}
+function renderNode(node) {
+  var def = NODE_TYPES[node.type];
+  if (!def) return;
+  var el = document.createElement("div");
+  el.className = "workflow-node";
+  el.id = node.id;
+  el.style.left = Math.round(node.x) + "px";
+  el.style.top = Math.round(node.y) + "px";
+  var title = (TYPE_NAMES[node.type] || node.type);
+  var clrBtn = "<button class=\"node-close\" onclick=\"removeNode(\'" + node.id + "\')\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"/><line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"/></svg></button>";
+  var portsHTML = renderPorts(node);
+  el.innerHTML = "<div class=\"node-header\"><div class=\"node-dot\" style=\"background:" + def.color + "\"></div><span class=\"node-title\">" + title + "</span>" + clrBtn + "</div><div class=\"node-body\">" + getNodeBodyHTML(node) + "</div><div class=\"node-side-ports\">" + portsHTML + "</div>";
+  el.addEventListener("mousedown", function (e) {
+    if (e.target.closest(".node-close") || e.target.closest(".port") || e.target.closest("textarea") || e.target.closest("input") || e.target.closest("button") || e.target.closest("select") || e.target.closest(".param-btn") || e.target.closest("input[type='range']")) return;
+    selectedNode = node.id;
+    document.querySelectorAll(".workflow-node").forEach(function (n) { n.classList.remove("selected"); });
+    el.classList.add("selected");
+    var sx = e.clientX, sy = e.clientY, ox = node.x, oy = node.y;
+    function mv(ev) { node.x = ox + (ev.clientX - sx) / (canvasState.scale || 1); node.y = oy + (ev.clientY - sy) / (canvasState.scale || 1); el.style.left = Math.round(node.x) + "px"; el.style.top = Math.round(node.y) + "px"; renderConnections(); }
+    function up() { document.removeEventListener("mousemove", mv); document.removeEventListener("mouseup", up); }
+    document.addEventListener("mousemove", mv);
+    document.addEventListener("mouseup", up);
+  });
+  var nl = document.getElementById("nodes-layer");
+  if (nl) nl.appendChild(el);
+  node.el = el;
+}
+var _origAddNode = addNode;
+addNode = function(type, x, y) {
+  if (x == null || y == null) {
+    var cmMenu = document.getElementById("context-menu");
+    if (cmMenu && cmMenu._canvasX != null) {
+      x = cmMenu._canvasX;
+      y = cmMenu._canvasY;
+    }
+  }
+  return _origAddNode(type, x, y);
+};
