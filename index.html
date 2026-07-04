@@ -746,13 +746,11 @@ function handleFileUpload(event, type) {
   var totalFiles = files.length;
   var savedFiles = []; for (var si = 0; si < totalFiles; si++) { savedFiles.push(files[si]); }
   event.target.value = '';
-  var pending = totalFiles;
   for (var fi = 0; fi < totalFiles; fi++) {
-    var f = savedFiles[fi];
-    try {
+    (function(ff, ttype, fidx) {
       var fr = new FileReader();
-      fr.onload = function(evt, ff, ttype, fidx) {
-        return function() {
+      fr.onload = function(evt) {
+        try {
           var url = evt.target.result;
           var nodeType = ttype === 'image' ? 'image' : 'video';
           var node = addNode(nodeType, 100 + fidx * 40, 100 + fidx * 40);
@@ -772,10 +770,10 @@ function handleFileUpload(event, type) {
             }
             showToast('Uploaded: ' + ff.name);
           }
-        };
-      }(evt, f, type, fi)();
-      fr.readAsDataURL(f);
-    } catch(e) {showToast('Upload Error: ' + e.message,'error');console.error(e)}
+        } catch(e) { showToast('Upload Error: ' + e.message, 'error'); console.error(e); }
+      };
+      try { fr.readAsDataURL(ff); } catch(e) { showToast('Upload Error: ' + e.message, 'error'); }
+    })(f, type, fi);
   }
   switchPage('create');
 }
