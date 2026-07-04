@@ -609,9 +609,9 @@ function showMentions(nodeId, query, el) {
   for (var i = 0; i < filtered.length; i++) {
     var r = filtered[i];
     if (r.image_url) {
-      h2 += '<div class=\"mention-item\" data-ref=\"' + r.name + '><img src=\"' + r.image_url + '\" style=\"width:28px;height:28px;border-radius:4px;object-fit:cover;display:inline-block;vertical-align:middle;margin-right:6px\">@' + r.name + ' <span class=\"mention-type\">' + r.typeName + '</span></div>';
+      h2 += '<div class=\"mention-item\" data-ref=\"' + r.name + '\"><img src=\"' + r.image_url + '\" style=\"width:28px;height:28px;border-radius:4px;object-fit:cover;display:inline-block;vertical-align:middle;margin-right:6px\">@' + r.name + ' <span class=\"mention-type\">' + r.typeName + '</span></div>';
     } else {
-      h2 += '<div class=\"mention-item\" data-ref=\"' + r.name + '><span class=\"mention-dot\" style=\"background:' + r.color + '\"></span>@' + r.name + ' <span class=\"mention-type\">' + r.typeName + '</span></div>';
+      h2 += '<div class=\"mention-item\" data-ref=\"' + r.name + '\"><span class=\"mention-dot\" style=\"background:' + r.color + '\"></span>@' + r.name + ' <span class=\"mention-type\">' + r.typeName + '</span></div>';
     }
   }
   dd.innerHTML = h2;
@@ -753,6 +753,7 @@ function handleFileUpload(event, type) {
     
       node.data['_' + type + '_url'] = url; node.lastResult = {}; node.lastResult[(type === 'image' ? 'image_url' : 'video_url')] = url;
       node.data.prompt = f.name;
+      if (node.el) { var nt = node.el.querySelector('.node-title'); if (nt) nt.textContent = type === 'image' ? 'Image' : 'Video'; }
       var bodyEl = node.el ? node.el.querySelector('.node-body') : null;
       if (bodyEl) {
         var preview = '';
