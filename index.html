@@ -747,6 +747,7 @@ function handleFileUpload(event, type) {
   var savedFiles = []; for (var si = 0; si < totalFiles; si++) { savedFiles.push(files[si]); }
   event.target.value = '';
   for (var fi = 0; fi < totalFiles; fi++) {
+    var f = savedFiles[fi];
     (function(ff, ttype, fidx) {
       var fr = new FileReader();
       fr.onload = function(evt) {
