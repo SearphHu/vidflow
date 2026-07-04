@@ -1215,7 +1215,18 @@ function restoreMediaPreview(node) {
   }
 }
 
-function loadProj(n){try{var a=JSON.parse(localStorage.getItem('seedance_projects')||'[]');var p=a[n];if(!p)return;nodes=p.nodesData||[];connections=p.connections||[];var e=document.getElementById('nodes-layer');if(e)e.innerHTML='';for(var i=0;i<nodes.length;i++){renderNode(nodes[i]);if(nodes[i].type==='video'){renderRefs(nodes[i].id);expandBtn(nodes[i].id)}if(nodes[i].type==='text'||nodes[i].type==='image'){addMS(nodes[i]);expandBtn(nodes[i].id)}if(nodes[i].type==='image'&&nodes[i].data&&nodes[i].data._image_url){restoreMediaPreview(nodes[i])}}renderConnections();switchPage('create');showToast('Loaded: '+p.name)}catch(e){showToast('Load failed','error')}}
+function loadProj(n){try{var a=JSON.parse(localStorage.getItem('seedance_projects')||'[]');var p=a[n];if(!p)return;nodes=p.nodesData||[];connections=p.connections||[];var e=document.getElementById('nodes-layer');if(e)e.innerHTML='';for(var i=0;i<nodes.length;i++){renderNode(nodes[i]);if(nodes[i].type==='video'){renderRefs(nodes[i].id);expandBtn(nodes[i].id)}if(nodes[i].type==='text'||nodes[i].type==='image'){addMS(nodes[i]);expandBtn(nodes[i].id)}if(nodes[i].type==='image'&&nodes[i].data&&nodes[i].data._image_url){
+  restoreMediaPreview(nodes[i]); // Run BEFORE addMS so generated preview shows
+  // Restore lastResult in result div
+  if(nodes[i].lastResult){
+    var rd=document.getElementById('result-'+nodes[i].id);
+    if(rd){
+      rd.style.display='block';
+      if(nodes[i].lastResult.image_url)rd.innerHTML='<img src="'+nodes[i].lastResult.image_url+'" style="width:100%;border-radius:6px">';
+      else if(nodes[i].lastResult.text)rd.innerHTML='<div style="padding:8px;font-size:12px;white-space:pre-wrap;">'+nodes[i].lastResult.text+'</div>';
+    }
+  }
+}}renderConnections();switchPage('create');showToast('Loaded: '+p.name)}catch(e){showToast('Load failed','error')}}
 function delProj(n){try{var a=JSON.parse(localStorage.getItem('seedance_projects')||'[]');a.splice(n,1);localStorage.setItem('seedance_projects',JSON.stringify(a));goHome();showToast('Project deleted')}catch(e){}}
 // API settings functions
 function toggleApiInput() {
