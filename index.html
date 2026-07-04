@@ -722,15 +722,27 @@ function uploadFile(type) {
   if (inp) inp.click();
 }
 function handleFileUpload(event, type) {
+
   var files = event.target.files;
+
   if (!files || files.length === 0) return;
+  var totalFiles = files.length;
+  var savedFiles = []; for (var si = 0; si < totalFiles; si++) { savedFiles.push(files[si]); }
   event.target.value = '';
-  for (var fi = 0; fi < files.length; fi++) {
-    var f = files[fi];
-    try {var url = URL.createObjectURL(f);
+
+  for (var fi = 0; fi < totalFiles; fi++) {
+  
+    var f = savedFiles[fi];
+  
+    try {
+    
+      var url = URL.createObjectURL(f);
+    
     var nodeType = type === 'image' ? 'image' : 'video';
     var node = addNode(nodeType, 100 + fi * 40, 100 + fi * 40);
+    
     if (node) {
+    
       node.data['_' + type + '_url'] = url; node.lastResult = {}; node.lastResult[(type === 'image' ? 'image_url' : 'video_url')] = url;
       node.data.prompt = f.name;
       var bodyEl = node.el ? node.el.querySelector('.node-body') : null;
