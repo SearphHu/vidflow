@@ -661,8 +661,15 @@ function addNode(type, x, y) {
     }
   };
   nodes.push(node);
-  // Assign sequence number based on type (for display: "Video Gen 1", etc.)
-  node.data._seq = nodes.filter(function(n){return n.type===type;}).length;
+  // Assign sequence number based on type (separate gen nodes from uploads)
+  var isUploadable = type === "image" || type === "video";
+  var genCount = 0;
+  for (var sci = 0; sci < nodes.length; sci++) {
+    if (nodes[sci].type !== type) continue;
+    if (isUploadable && nodes[sci].data && (nodes[sci].data._image_url || nodes[sci].data._video_url)) continue;
+    genCount++;
+  }
+  node.data._seq = genCount;
   renderNode(node);
   if (type === 'video') { renderRefs(node.id); var eb2=document.createElement('button');eb2.className='expand-btn';eb2.innerHTML='\u2bf6';eb2.title='\u653e\u5927\u7f16\u8f91';eb2.onclick=function(){openVideoModal(node.id)};var ta2=document.getElementById(node.id).querySelector('textarea');if(ta2)ta2.insertAdjacentElement('afterend',eb2);}
 
@@ -906,6 +913,14 @@ function handleFileUpload(event, type) {
           if (node) {
             node.data['_' + ttype + '_url'] = url; node.lastResult = {}; node.lastResult[(ttype === 'image' ? 'image_url' : 'video_url')] = url;
             node.data.prompt = ff.name;
+            // Recalculate seq for upload nodes (separate from gen nodes)
+            var upCount = 0;
+            for (var uci = 0; uci < nodes.length; uci++) {
+              if (nodes[uci].type !== nodeType) continue;
+              if (nodeType === "image" && nodes[uci].data && nodes[uci].data._image_url) upCount++;
+              else if (nodeType === "video" && nodes[uci].data && nodes[uci].data._video_url) upCount++;
+            }
+            node.data._seq = upCount;
             if (node.el) { var nt = node.el.querySelector('.node-title'); if (nt) nt.textContent = ttype === 'image' ? 'Image' : 'Video'; }
             var bodyEl = node.el ? node.el.querySelector('.node-body') : null;
             if (bodyEl) {
@@ -1150,7 +1165,7 @@ function renderNode(node) {
   el.id = node.id;
   el.style.left = Math.round(node.x) + "px";
   el.style.top = Math.round(node.y) + "px";
-  var seq = node.data && node.data._seq && !node.data._image_url && !node.data._video_url ? ' ' + node.data._seq : '';
+  var seq = node.data && node.data._seq ? ' ' + node.data._seq : '';
   var title = node.data && (node.data._image_url||node.data._video_url) ? (node.type==='image'?'Image':'Video') : (TYPE_NAMES[node.type]||node.type) + seq;
   var clrBtn = "<button class=\"node-close\" onclick=\"removeNode(\'" + node.id + "\')\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"/><line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"/></svg></button>";
   var portsHTML = renderPorts(node);
