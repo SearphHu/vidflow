@@ -126,6 +126,7 @@ const SeedanceAPI={
   seedanceMiniKey: localStorage.getItem('seedance_mini_api_key') || '',
   image2Endpoint: 'https://api.openai.com/v1/images/generations',
   seedreamEndpoint: 'https://ark.cn-beijing.volces.com/api/v3/images/generations',
+  seedreamKey: localStorage.getItem('seedream_api_key') || '',
   endpoint: 'https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks',
   modelId: 'doubao-seedance-2-0-260128',
   setApiKey(k){this.apiKey=k;localStorage.setItem('seedance_api_key',k)},
@@ -150,8 +151,9 @@ const SeedanceAPI={
       var modelId = this.modelId; var apiKey = this.apiKey;
       if (params.model === 'seedance-mini') { modelId = 'doubao-seedance-2-0-mini-260615'; apiKey = this.seedanceMiniKey; }
       var r=params.ratio||'16:9';var rP=r.split(':');var rw=parseInt(rP[0]);var rh=parseInt(rP[1]);var q=parseInt(params.quality)||720;var w,h;if(rw>rh){h=q;w=Math.round(q*rw/rh/16)*16}else{w=q;h=Math.round(q*rh/rw/16)*16}var r=params.ratio||'16:9';var rP=r.split(':');var w=parseInt(rP[0]);var h=parseInt(rP[1]);var q=parseInt(params.quality)||720;var sw,sh;if(w>h){sh=q;sw=Math.round(q*w/h/16)*16}else{sw=q;sh=Math.round(q*h/w/16)*16}var res=(params.quality||'720P').toLowerCase();var body={model:modelId,content:content,duration:params.duration||11,ratio:params.ratio||'16:9',resolution:res};
+      console.log("API request body:",JSON.stringify(body).substring(0,500));
       var r=await fetch(this.endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify(body)});
-      if(!r.ok)throw new Error('HTTP '+r.status);
+      if(!r.ok){var errBody="";try{errBody=await r.text()}catch(e2){}console.error("API error response:",r.status,errBody.substring(0,500));throw new Error("HTTP "+r.status+": "+(errBody||"no response"));}
       var result=await r.json();
       console.log('Task submitted:',JSON.stringify(result).substring(0,300));
         var taskId = result.id || result.task_id || (result.data && result.data.id) || (result.data && result.data.task_id);
