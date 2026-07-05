@@ -824,7 +824,7 @@ function insertMention(nodeId, refName) {
     var text = el.value;
     var atPos = text.lastIndexOf("@");
     if (atPos >= 0) {
-      el.value = text.substring(0, atPos) + "@" + refName + ' ' + text.substring(atPos + 1);
+      el.value = text.substring(0, atPos) + refName + ' ' + text.substring(atPos + 1);
       updateNodeData(nodeId, 'prompt', el.value);
     }
     hideMentions(nodeId);
@@ -836,7 +836,7 @@ function insertMention(nodeId, refName) {
   var text = el.value;
   var atPos = text.lastIndexOf("@");
   if (atPos >= 0) {
-    el.value = text.substring(0, atPos) + "@" + refName + ' ' + text.substring(atPos + 1);
+    el.value = text.substring(0, atPos) + refName + ' ' + text.substring(atPos + 1);
     updateNodeData(nodeId, 'prompt', el.value);
   }
   hideMentions(nodeId);
@@ -926,9 +926,9 @@ function handleFileUpload(event, type) {
             if (bodyEl) {
               var preview = '';
               if (ttype === 'image') {
-                preview = '<img src="' + url + '" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border-bottom:1px solid var(--border)" alt="' + ff.name + '">';
+                preview = '<img src="' + url + '" style="width:100%;height:auto;object-fit:contain;display:block;border-bottom:1px solid var(--border)" alt="' + ff.name + '">';
               } else {
-                preview = '<video src="' + url + '" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border-bottom:1px solid var(--border)" controls></video>';
+                preview = '<video src="' + url + '" style="width:100%;height:auto;object-fit:contain;display:block;border-bottom:1px solid var(--border)" controls></video>';
               }
               bodyEl.innerHTML = preview + '<div class="node-result" style="margin:0;border-radius:0;padding:8px 12px;font-size:12px;color:var(--text2)">' + ff.name + '</div>';
             }
@@ -1146,7 +1146,7 @@ function getNodeBodyHTML(node) {
       return '<div class="node-preview-area"><div class="node-preview-placeholder"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".4"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><textarea placeholder="Enter text prompt..." oninput="updateNodeData(\'' + node.id + '\',\'prompt\',this.value)">' + p + '</textarea></div>';
         case 'image':
       if (d._image_url) {
-        return '<div class="node-preview-area"><img src="' + d._image_url + '" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border-bottom:1px solid var(--border)" alt=""><div class="node-result" style="margin:0;border-radius:0;padding:8px 12px;font-size:12px;color:var(--text2)">' + (d.prompt || "Uploaded Image") + '</div></div>';
+        return '<div class="node-preview-area"><img src="' + d._image_url + '" style="width:100%;height:auto;object-fit:contain;display:block;border-bottom:1px solid var(--border)" alt=""><div class="node-result" style="margin:0;border-radius:0;padding:8px 12px;font-size:12px;color:var(--text2)">' + (d.prompt || "Uploaded Image") + '</div></div>';
       }
       return '<div class="node-preview-area"><input type="text" placeholder="Image prompt..." value="' + p + '" oninput="updateNodeData(\'' + node.id + '\',\'prompt\',this.value)"></div><div class="node-params"><div class="param-row"><label>Size</label><select onchange="updateNodeData(\'' + node.id + '\',\'resolution\',this.value)"><option value="720x1280">720x1280</option><option value="1080x1920">1080x1920</option><option value="1024x1024">1024x1024</option></select></div></div>';
 case 'video':
@@ -1385,7 +1385,7 @@ function restoreMediaPreview(node) {
   var body = node.el.querySelector('.node-body');
   if (!body) return;
   var url = node.data._image_url;
-  body.innerHTML = '<img src="' + url + '" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border-bottom:1px solid var(--border)" alt="' + (node.data.prompt || '') + '">' +
+  body.innerHTML = '<img src="' + url + '" style="width:100%;height:auto;object-fit:contain;display:block;border-bottom:1px solid var(--border)" alt="' + (node.data.prompt || '') + '">' +
     '<div class="node-result" style="margin:0;border-radius:0;padding:8px 12px;font-size:12px;color:var(--text2)">' + (node.data.prompt || '') + '</div>';
   // Restore generated result if exists
   if (node.lastResult) {
