@@ -227,6 +227,152 @@ const SeedanceAPI={
 
 </script>
 <script>
+// IndexedDB storage for project data (avoid localStorage quota issues with data URLs)
+var DB_NAME = 'VidFlowDB', DB_VER = 1;
+function openDB() {
+  return new Promise(function(resolve, reject) {
+    var req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = function(e) {
+      var db = e.target.result;
+      if (!db.objectStoreNames.contains('projects')) db.createObjectStore('projects', { keyPath: 'name' });
+      if (!db.objectStoreNames.contains('images')) db.createObjectStore('images');
+    };
+    req.onsuccess = function(e) { resolve(e.target.result); };
+    req.onerror = function(e) { reject(e.target.error); };
+  });
+}
+function dbSaveProject(name, data) {
+  return openDB().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction('projects', 'readwrite');
+      tx.objectStore('projects').put({ name: name, data: data });
+      tx.oncomplete = function() { db.close(); resolve(); };
+      tx.onerror = function(e) { db.close(); reject(e.target.error); };
+    });
+  });
+}
+function dbLoadProject(name) {
+  return openDB().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction('projects', 'readonly');
+      var req = tx.objectStore('projects').get(name);
+      req.onsuccess = function() { db.close(); resolve(req.result ? req.result.data : null); };
+      req.onerror = function(e) { db.close(); reject(e.target.error); };
+    });
+  });
+}
+function dbDeleteProject(name) {
+  return openDB().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction('projects', 'readwrite');
+      tx.objectStore('projects').delete(name);
+      tx.oncomplete = function() { db.close(); resolve(); };
+      tx.onerror = function(e) { db.close(); reject(e.target.error); };
+    });
+  });
+}
+function dbGetAllProjects() {
+  return openDB().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction('projects', 'readonly');
+      var req = tx.objectStore('projects').getAll();
+      req.onsuccess = function() { db.close(); resolve(req.result || []); };
+      req.onerror = function(e) { db.close(); reject(e.target.error); };
+    });
+  });
+}
+function dbSaveImage(key, dataUrl) {
+  return openDB().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction('images', 'readwrite');
+      tx.objectStore('images').put(dataUrl, key);
+      tx.oncomplete = function() { db.close(); resolve(); };
+      tx.onerror = function(e) { db.close(); reject(e.target.error); };
+    });
+  });
+}
+function dbLoadImage(key) {
+  return openDB().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction('images', 'readonly');
+      var req = tx.objectStore('images').get(key);
+      req.onsuccess = function() { db.close(); resolve(req.result || null); };
+      req.onerror = function(e) { db.close(); reject(e.target.error); };
+    });
+  });
+}
+
+// IndexedDB storage for project data (avoid localStorage quota issues with data URLs)
+var DB_NAME = 'VidFlowDB', DB_VER = 1;
+function openDB() {
+  return new Promise(function(resolve, reject) {
+    var req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = function(e) {
+      var db = e.target.result;
+      if (!db.objectStoreNames.contains('projects')) db.createObjectStore('projects', { keyPath: 'name' });
+      if (!db.objectStoreNames.contains('images')) db.createObjectStore('images');
+    };
+    req.onsuccess = function(e) { resolve(e.target.result); };
+    req.onerror = function(e) { reject(e.target.error); };
+  });
+}
+function dbSaveImage(key, dataUrl) {
+  return openDB().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction('images', 'readwrite');
+      tx.objectStore('images').put(dataUrl, key);
+      tx.oncomplete = function() { db.close(); resolve(); };
+      tx.onerror = function(e) { db.close(); reject(e.target.error); };
+    });
+  });
+}
+function dbLoadImage(key) {
+  return openDB().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction('images', 'readonly');
+      var req = tx.objectStore('images').get(key);
+      req.onsuccess = function() { db.close(); resolve(req.result || null); };
+      req.onerror = function(e) { db.close(); reject(e.target.error); };
+    });
+  });
+}
+function dbSaveProject(name, data) {
+  return openDB().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction('projects', 'readwrite');
+      tx.objectStore('projects').put({ name: name, data: data });
+      tx.oncomplete = function() { db.close(); resolve(); };
+      tx.onerror = function(e) { db.close(); reject(e.target.error); };
+    });
+  });
+}
+function dbLoadAllProjects() {
+  return openDB().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction('projects', 'readonly');
+      var req = tx.objectStore('projects').getAll();
+      req.onsuccess = function() { db.close(); resolve(req.result || []); };
+      req.onerror = function(e) { db.close(); reject(e.target.error); };
+    });
+  });
+}
+function dbDeleteProject(name) {
+  return openDB().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction('projects', 'readwrite');
+      tx.objectStore('projects').delete(name);
+      tx.oncomplete = function() { db.close(); resolve(); };
+      tx.onerror = function(e) { db.close(); reject(e.target.error); };
+    });
+  });
+}
+
+// Ensure window has IndexedDB functions for onclick handlers to use
+window.dbSaveImage = dbSaveImage;
+window.dbLoadImage = dbLoadImage;
+window.dbSaveProject = dbSaveProject;
+window.dbLoadAllProjects = dbLoadAllProjects;
+window.dbDeleteProject = dbDeleteProject;
 const NODE_TYPES = {
   prompt: { color: '#F59E0B', title: 'Prompt', icon: 'P', inputs: [], outputs: ['text'], defaults: { prompt: '' } },
   text: { color: '#8B5CF6', title: 'Text Gen', icon: 'T', inputs: ['prompt'], outputs: ['text'], defaults: {} },
@@ -1189,7 +1335,7 @@ function addMS(node){if(!node||!node.el||(node.type!=='text'&&node.type!=='image
 async function execFromNode(n){var g=getNode(n);if(!g){showToast('Node not found','error');return}showToast('Generating...');var e=document.getElementById('result-'+n);if(e){e.style.display='block';e.innerHTML='<div style="padding:10px;text-align:center;color:var(--text3);font-size:12px;">Generating...</div>'}try{var r=await execNode(g);g.lastResult=r||{};if(e){if(r.video_url){e.innerHTML='<div style="position:relative;"><video src="'+r.video_url+'" controls style="width:100%;border-radius:6px;display:block;background:#000;" autoplay muted></video></div>'}else if(r.image_url){e.innerHTML='<img src="'+r.image_url+'" style="width:100%;border-radius:6px">'}else if(r.text){e.innerHTML='<div style="padding:8px;font-size:12px;white-space:pre-wrap;">'+r.text+'</div>'}else if(r.error){e.innerHTML='<div style="color:#ff4444;padding:8px;font-size:12px;">Error: '+r.error+'</div>'}else{e.innerHTML='<div style="padding:8px;font-size:11px;color:var(--text2);">Completed</div>'}}if(g.type==='video'||g.type==='image')expandBtn(g.id);for(var i=0;i<nodes.length;i++)renderRefs(nodes[i].id)}catch(ex){console.error(ex);showToast('Failed: '+ex.message,'error');if(e)e.innerHTML='<div style="color:#ff4444;padding:8px;font-size:12px;">Error: '+ex.message+'</div>'}}
 function autoSL(){if(nodes.length===0)return;try{var p=JSON.parse(localStorage.getItem('seedance_projects')||'[]');var curName=localStorage.getItem('vidflow_current_project')||'';if(curName){var found=false;for(var ai=0;ai<p.length;ai++){if(p[ai].name===curName){p[ai].nodesData=JSON.parse(JSON.stringify(nodes));p[ai].connections=JSON.parse(JSON.stringify(connections));p[ai].desc=nodes.length+' nodes';p[ai].date=new Date().toLocaleDateString();found=true;break}}if(!found){p.push({name:curName,desc:nodes.length+' nodes',date:new Date().toLocaleDateString(),nodes:nodes.length,nodesData:JSON.parse(JSON.stringify(nodes)),connections:JSON.parse(JSON.stringify(connections))})}}else{var newName='Project '+(p.length+1);p.push({name:newName,desc:nodes.length+' nodes',date:new Date().toLocaleDateString(),nodes:nodes.length,nodesData:JSON.parse(JSON.stringify(nodes)),connections:JSON.parse(JSON.stringify(connections))});localStorage.setItem('vidflow_current_project',newName)}if(p.length>50)p.length=50;localStorage.setItem('seedance_projects',JSON.stringify(p))}catch(e){console.error('autoSL error:',e)}}
 function setupAS(){var oa=addNode;addNode=function(t,x,y){var r=oa(t,x,y);setTimeout(autoSL,100);if(r&&(r.type==='text'||r.type==='image'))addMS(r);if(r&&r.type==='video')expandBtn(r.id);return r};var or=removeNode;removeNode=function(i){or(i);setTimeout(autoSL,100)}}
-function newProj(){saveCurrentCanvas();nodes=[];connections=[];nodeIdCounter=0;var e=document.getElementById('nodes-layer');if(e)e.innerHTML='';renderConnections();switchPage('create');showToast('New project created')}
+async function newProj(){try{await saveCurrentCanvas()}catch(e){}nodes=[];connections=[];nodeIdCounter=0;var e=document.getElementById('nodes-layer');if(e)e.innerHTML='';renderConnections();switchPage('create');showToast('New project created')}
 
 function restoreMediaPreview(node) {
   if (!node || !node.el) return;
@@ -1214,19 +1360,7 @@ function restoreMediaPreview(node) {
   }
 }
 
-function loadProj(n){try{var a=JSON.parse(localStorage.getItem('seedance_projects')||'[]');var p=a[n];if(!p)return;nodes=p.nodesData||[];connections=p.connections||[];var e=document.getElementById('nodes-layer');if(e)e.innerHTML='';for(var i=0;i<nodes.length;i++){renderNode(nodes[i]);if(nodes[i].type==='video'){renderRefs(nodes[i].id);expandBtn(nodes[i].id)}if(nodes[i].type==='text'||nodes[i].type==='image'){addMS(nodes[i]);expandBtn(nodes[i].id)}if(nodes[i].type==='image'&&nodes[i].data&&nodes[i].data._image_url){
-  restoreMediaPreview(nodes[i]); // Run BEFORE addMS so generated preview shows
-  // Restore lastResult in result div
-  if(nodes[i].lastResult){
-    var rd=document.getElementById('result-'+nodes[i].id);
-    if(rd){
-      rd.style.display='block';
-      if(nodes[i].lastResult.image_url)rd.innerHTML='<img src="'+nodes[i].lastResult.image_url+'" style="width:100%;border-radius:6px">';
-      else if(nodes[i].lastResult.text)rd.innerHTML='<div style="padding:8px;font-size:12px;white-space:pre-wrap;">'+nodes[i].lastResult.text+'</div>';
-    }
-  }
-}}renderConnections();switchPage('create');showToast('Loaded: '+p.name)}catch(e){showToast('Load failed','error')}}
-function delProj(n){try{var a=JSON.parse(localStorage.getItem('seedance_projects')||'[]');a.splice(n,1);localStorage.setItem('seedance_projects',JSON.stringify(a));goHome();showToast('Project deleted')}catch(e){}}
+async function loadProj(n){try{var a=JSON.parse(localStorage.getItem('seedance_projects')||'[]');var p=a[n];if(!p)return;var nd=p.nodesData||[];var cn=p.connections||[];if(!nd||nd.length===0){try{var idbProj=await dbLoadAllProjects();for(var ii=0;ii<idbProj.length;ii++){if(idbProj[ii].name===p.name){nd=idbProj[ii].data.nodesData||[];cn=idbProj[ii].data.connections||[];break}}}catch(e2){}}nodes=nd;connections=cn;var e=document.getElementById('nodes-layer');if(e)e.innerHTML='';for(var i=0;i<nodes.length;i++){renderNode(nodes[i]);if(nodes[i].type==='video'){renderRefs(nodes[i].id);expandBtn(nodes[i].id)}if(nodes[i].type==='text'||nodes[i].type==='image'){addMS(nodes[i]);expandBtn(nodes[i].id)}if(nodes[i].type==='image'&&nodes[i].data&&nodes[i].data._image_url){restoreMediaPreview(nodes[i]);if(nodes[i].lastResult){var rd=document.getElementById('result-'+nodes[i].id);if(rd){rd.style.display='block';if(nodes[i].lastResult.image_url)rd.innerHTML='<img src="'+nodes[i].lastResult.image_url+'" style="width:100%;border-radius:6px">';else if(nodes[i].lastResult.text)rd.innerHTML='<div style="padding:8px;font-size:12px;white-space:pre-wrap;">'+nodes[i].lastResult.text+'</div>'}}}}renderConnections();switchPage('create');showToast('Loaded: '+p.name)}catch(e){showToast('Load failed: '+e.message,'error')}}function delProj(n){try{var a=JSON.parse(localStorage.getItem('seedance_projects')||'[]');a.splice(n,1);localStorage.setItem('seedance_projects',JSON.stringify(a));goHome();showToast('Project deleted')}catch(e){}}
 // API settings functions
 function toggleApiInput() {
   var popup = document.getElementById("api-input-popup");
@@ -1294,7 +1428,7 @@ function saveDeepSeekKey() {
   document.getElementById("api-input-popup").style.display = "none";
 }
 
-function saveCurrentCanvas() {
+async function saveCurrentCanvas() {
   if (nodes.length === 0) return;
   try {
     var arr = JSON.parse(localStorage.getItem("seedance_projects") || "[]");
@@ -1318,8 +1452,40 @@ function saveCurrentCanvas() {
       });
       localStorage.setItem("vidflow_current_project", newName);
     }
-    localStorage.setItem("seedance_projects", JSON.stringify(arr));
-  } catch(e) { console.error("saveCurrentCanvas error:", e); showToast("Save error: " + e.message, "error"); }
+    // Try localStorage first
+    var jsonStr = JSON.stringify(arr);
+    if (jsonStr.length > 4000000) { // > 4MB, use IndexedDB
+      await dbSaveProject(curName || newName, { nodesData: JSON.parse(JSON.stringify(nodes)), connections: JSON.parse(JSON.stringify(connections)) });
+      // Store metadata only in localStorage
+      var metaOnly = [];
+      for (var mi = 0; mi < arr.length; mi++) {
+        metaOnly.push({ name: arr[mi].name, desc: arr[mi].desc, date: arr[mi].date, nodes: arr[mi].nodes });
+      }
+      localStorage.setItem("seedance_projects", JSON.stringify(metaOnly));
+    } else {
+      localStorage.setItem("seedance_projects", jsonStr);
+    }
+  } catch(e) {
+    // Fallback: store in IndexedDB
+    if (e.name === "QuotaExceededError") {
+      try {
+        var projName = curName || ("Project " + (arr.length + 1));
+        await dbSaveProject(projName, { nodesData: JSON.parse(JSON.stringify(nodes)), connections: JSON.parse(JSON.stringify(connections)) });
+        var metaOnly = [];
+        for (var mi = 0; mi < arr.length; mi++) {
+          metaOnly.push({ name: arr[mi].name, desc: arr[mi].desc, date: arr[mi].date, nodes: arr[mi].nodes });
+        }
+        localStorage.setItem("seedance_projects", JSON.stringify(metaOnly));
+        showToast("Project saved successfully", "success");
+      } catch(e2) {
+        console.error("saveCurrentCanvas error:", e2);
+        showToast("Storage full - please delete old projects", "error");
+      }
+    } else {
+      console.error("saveCurrentCanvas error:", e);
+      showToast("Save error: " + e.message, "error");
+    }
+  }
 }
 
 function renameProject(idx, el) {
@@ -1344,8 +1510,8 @@ window.saveAllApiKeys = saveAllApiKeys;
 window.saveApiKey = saveApiKey;
 window.saveDeepSeekKey = saveDeepSeekKey;
 window.saveCurrentCanvas = saveCurrentCanvas;
-window.renameProject = renameProject;function goHome() {
-  if (nodes.length > 0) { saveCurrentCanvas(); }
+window.renameProject = renameProject;async function goHome() {
+  if (nodes.length > 0) { try { await saveCurrentCanvas(); } catch(e) {} }
   switchPage('home');
   
   var t = document.getElementById("home-templates");
