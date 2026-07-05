@@ -851,7 +851,7 @@ function getConnectedRefs(nodeId) {
           var def = NODE_TYPES[nodes[ni].type];
           refs.push({
             id: nodes[ni].id,
-            name: def ? (nodes[ni].type === 'image' ? (nodes[ni].data && nodes[ni].data._image_url ? 'Image' : 'Image Gen') : nodes[ni].type === 'video' ? (nodes[ni].data && nodes[ni].data._video_url ? 'Video' : 'Video Gen') : def.title) : nodes[ni].type,
+            name: def ? (nodes[ni].type === 'image' ? (nodes[ni].data && nodes[ni].data._image_url ? 'Image' : 'Image Gen') + (nodes[ni].data && nodes[ni].data._seq ? ' ' + nodes[ni].data._seq : '') : nodes[ni].type === 'video' ? (nodes[ni].data && nodes[ni].data._video_url ? 'Video' : 'Video Gen') + (nodes[ni].data && nodes[ni].data._seq ? ' ' + nodes[ni].data._seq : '') : def.title + (nodes[ni].data && nodes[ni].data._seq ? ' ' + nodes[ni].data._seq : '')) : nodes[ni].type,
             typeName: def ? (nodes[ni].type === 'prompt' ? 'Prompt' : nodes[ni].type === 'text' ? 'Text' : nodes[ni].type === 'image' ? (nodes[ni].data && nodes[ni].data._image_url ? 'Image' : 'Image Gen') : 'Video') : '',
             image_url: nodes[ni].lastResult && nodes[ni].lastResult.image_url ? nodes[ni].lastResult.image_url : '',
             color: def ? def.color : '#6B7280',
