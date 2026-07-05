@@ -392,7 +392,7 @@ const MODELS = [
   { name: 'Midjourney V6', desc: 'Top-tier image generation quality', icon: 'M', color: '#3B82F6', type: 'image', downloads: '340K' },
   { name: 'CogVideoX', desc: 'Open-source video generation model', icon: 'C', color: '#EF4444', type: 'video', downloads: '43K' }
 ];
-let nodes = [], connections = [], nodeIdCounter = 0, selectedNode = null;
+let nodes = [], connections = [], nodeIdCounter = 0, nodeTypeCounts = {}, selectedNode = null;
 let connecting = { active: false, sourcePort: null, sourceNode: null };
 let canvasState = { x: 0, y: 0, scale: 1 };
 let isDraggingCanvas = false, dragStart = { x: 0, y: 0 };
@@ -661,6 +661,8 @@ function addNode(type, x, y) {
     }
   };
   nodes.push(node);
+  // Assign sequence number based on type (for display: "Video Gen 1", etc.)
+  node.data._seq = nodes.filter(function(n){return n.type===type;}).length;
   renderNode(node);
   if (type === 'video') { renderRefs(node.id); var eb2=document.createElement('button');eb2.className='expand-btn';eb2.innerHTML='\u2bf6';eb2.title='\u653e\u5927\u7f16\u8f91';eb2.onclick=function(){openVideoModal(node.id)};var ta2=document.getElementById(node.id).querySelector('textarea');if(ta2)ta2.insertAdjacentElement('afterend',eb2);}
 
@@ -1148,7 +1150,8 @@ function renderNode(node) {
   el.id = node.id;
   el.style.left = Math.round(node.x) + "px";
   el.style.top = Math.round(node.y) + "px";
-  var title = node.data && (node.data._image_url||node.data._video_url) ? (node.type==='image'?'Image':'Video') : (TYPE_NAMES[node.type]||node.type);
+  var seq = node.data && node.data._seq && !node.data._image_url && !node.data._video_url ? ' ' + node.data._seq : '';
+  var title = node.data && (node.data._image_url||node.data._video_url) ? (node.type==='image'?'Image':'Video') : (TYPE_NAMES[node.type]||node.type) + seq;
   var clrBtn = "<button class=\"node-close\" onclick=\"removeNode(\'" + node.id + "\')\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"/><line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"/></svg></button>";
   var portsHTML = renderPorts(node);
   el.innerHTML = "<div class=\"node-header\"><div class=\"node-dot\" style=\"background:" + def.color + "\"></div><span class=\"node-title\">" + title + "</span>" + clrBtn + "</div><div class=\"node-body\">" + getNodeBodyHTML(node) + "</div><div class=\"node-side-ports\">" + portsHTML + "</div>";
