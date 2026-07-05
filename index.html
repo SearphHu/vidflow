@@ -867,10 +867,10 @@ function renderRefs(nodeId) {
     var r = refs[i];
     var cn = getNode(r.id);
     if (cn && cn.lastResult && cn.lastResult.image_url) {
-      html += '<span class="node-ref node-ref-image" style="display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:4px;font-size:11px"><img src="' + cn.lastResult.image_url + '" style="width:22px;height:22px;border-radius:3px;object-fit:cover;display:block">@' + r.name + '<span class="ref-remove" onclick="event.stopPropagation();removeRefConnection('' + nodeId + '','' + r.id + '')" style="margin-left:3px;cursor:pointer;opacity:0.6;font-size:10px;line-height:1;color:#ff4444">&times;</span></span>';
+      html += '<span class="node-ref node-ref-image" style="display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:4px;font-size:11px"><img src="' + cn.lastResult.image_url + '" style="width:22px;height:22px;border-radius:3px;object-fit:cover;display:block">@' + r.name + '<span class="ref-remove" onclick="event.stopPropagation();removeRefConnection(\'' + nodeId + '\',\'' + r.id + '\')" style="margin-left:3px;cursor:pointer;opacity:0.6;font-size:10px;line-height:1;color:#ff4444">&times;</span></span>';
     } else {
       var cls = 'node-ref node-ref-' + (r.port || 'text');
-      html += '<span class="' + cls + '"><span class="node-ref-dot" style="background:' + r.color + '"></span>@' + r.name + '<span class="ref-remove" onclick="event.stopPropagation();removeRefConnection('' + nodeId + '','' + r.id + '')" style="margin-left:3px;cursor:pointer;opacity:0.6;font-size:10px;line-height:1;color:#ff4444">&times;</span></span>';
+      html += '<span class="' + cls + '"><span class="node-ref-dot" style="background:' + r.color + '"></span>@' + r.name + '<span class="ref-remove" onclick="event.stopPropagation();removeRefConnection(\'' + nodeId + '\',\'' + r.id + '\')" style="margin-left:3px;cursor:pointer;opacity:0.6;font-size:10px;line-height:1;color:#ff4444">&times;</span></span>';
     }
   }
   refsEl.innerHTML = html;
