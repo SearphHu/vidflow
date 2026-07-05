@@ -921,7 +921,7 @@ function handleFileUpload(event, type) {
               else if (nodeType === "video" && nodes[uci].data && nodes[uci].data._video_url) upCount++;
             }
             node.data._seq = upCount;
-            if (node.el) { var nt = node.el.querySelector('.node-title'); if (nt) nt.textContent = ttype === 'image' ? 'Image' : 'Video'; }
+            if (node.el) { var nt = node.el.querySelector('.node-title'); if (nt) nt.textContent = (ttype === 'image' ? 'Image' : 'Video') + ' ' + node.data._seq; }
             var bodyEl = node.el ? node.el.querySelector('.node-body') : null;
             if (bodyEl) {
               var preview = '';
@@ -1166,7 +1166,8 @@ function renderNode(node) {
   el.style.left = Math.round(node.x) + "px";
   el.style.top = Math.round(node.y) + "px";
   var seq = node.data && node.data._seq ? ' ' + node.data._seq : '';
-  var title = node.data && (node.data._image_url||node.data._video_url) ? (node.type==='image'?'Image':'Video') : (TYPE_NAMES[node.type]||node.type) + seq;
+  var baseTitle = node.data && (node.data._image_url||node.data._video_url) ? (node.type==='image'?'Image':'Video') : (TYPE_NAMES[node.type]||node.type);
+  var title = baseTitle + seq;
   var clrBtn = "<button class=\"node-close\" onclick=\"removeNode(\'" + node.id + "\')\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"/><line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"/></svg></button>";
   var portsHTML = renderPorts(node);
   el.innerHTML = "<div class=\"node-header\"><div class=\"node-dot\" style=\"background:" + def.color + "\"></div><span class=\"node-title\">" + title + "</span>" + clrBtn + "</div><div class=\"node-body\">" + getNodeBodyHTML(node) + "</div><div class=\"node-side-ports\">" + portsHTML + "</div>";
