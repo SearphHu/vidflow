@@ -1219,7 +1219,7 @@ async function execNode(node) {
     case "text": var p = node.getInput("prompt") || node.data.prompt || "default"; return await SeedanceAPI.generateText(p);
     case "image": var pi = node.getInput("prompt") || node.data.prompt || "default"; if(node.data._image_url)return{id:"img_"+Date.now(),image_url:node.data._image_url,prompt:pi}; var imodel = node.data.model || "image2"; return await SeedanceAPI.generateImage(pi, imodel);
     case "video":
-      var pv = node.getInput("prompt") || node.data.prompt || "default";
+      var pv = node.data.prompt || node.getInput("prompt") || "default";
       pv = pv.replace(/@\w+/g,'').trim();
       var params = { prompt: pv, duration: node.data.duration || 5, ratio: node.data.ratio || "16:9", quality: node.data.quality || "720P", model: node.data.model || "seedance-2" };
       // Collect ALL reference images/videos from connected nodes
@@ -1229,7 +1229,7 @@ async function execNode(node) {
           for (var ni_v = 0; ni_v < nodes.length; ni_v++) {
             if (nodes[ni_v].id === connections[ci_v].from && nodes[ni_v].lastResult) {
               var lr = nodes[ni_v].lastResult;
-              if (lr.image_url) refImgs.push(lr.image_url);
+              if (lr.image_url && lr.image_url.indexOf("data:") !== 0) refImgs.push(lr.image_url);
               if (lr.video_url) refVids.push(lr.video_url);
             }
           }
