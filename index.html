@@ -1335,7 +1335,18 @@ function addMS(node){if(!node||!node.el||(node.type!=='text'&&node.type!=='image
 async function execFromNode(n){var g=getNode(n);if(!g){showToast('Node not found','error');return}showToast('Generating...');var e=document.getElementById('result-'+n);if(e){e.style.display='block';e.innerHTML='<div style="padding:10px;text-align:center;color:var(--text3);font-size:12px;">Generating...</div>'}try{var r=await execNode(g);g.lastResult=r||{};if(e){if(r.video_url){e.innerHTML='<div style="position:relative;"><video src="'+r.video_url+'" controls style="width:100%;border-radius:6px;display:block;background:#000;" autoplay muted></video></div>'}else if(r.image_url){e.innerHTML='<img src="'+r.image_url+'" style="width:100%;border-radius:6px">'}else if(r.text){e.innerHTML='<div style="padding:8px;font-size:12px;white-space:pre-wrap;">'+r.text+'</div>'}else if(r.error){e.innerHTML='<div style="color:#ff4444;padding:8px;font-size:12px;">Error: '+r.error+'</div>'}else{e.innerHTML='<div style="padding:8px;font-size:11px;color:var(--text2);">Completed</div>'}}if(g.type==='video'||g.type==='image')expandBtn(g.id);for(var i=0;i<nodes.length;i++)renderRefs(nodes[i].id)}catch(ex){console.error(ex);showToast('Failed: '+ex.message,'error');if(e)e.innerHTML='<div style="color:#ff4444;padding:8px;font-size:12px;">Error: '+ex.message+'</div>'}}
 function autoSL(){if(nodes.length===0)return;try{var p=JSON.parse(localStorage.getItem('seedance_projects')||'[]');var curName=localStorage.getItem('vidflow_current_project')||'';if(curName){var found=false;for(var ai=0;ai<p.length;ai++){if(p[ai].name===curName){p[ai].nodesData=JSON.parse(JSON.stringify(nodes));p[ai].connections=JSON.parse(JSON.stringify(connections));p[ai].desc=nodes.length+' nodes';p[ai].date=new Date().toLocaleDateString();found=true;break}}if(!found){p.push({name:curName,desc:nodes.length+' nodes',date:new Date().toLocaleDateString(),nodes:nodes.length,nodesData:JSON.parse(JSON.stringify(nodes)),connections:JSON.parse(JSON.stringify(connections))})}}else{var newName='Project '+(p.length+1);p.push({name:newName,desc:nodes.length+' nodes',date:new Date().toLocaleDateString(),nodes:nodes.length,nodesData:JSON.parse(JSON.stringify(nodes)),connections:JSON.parse(JSON.stringify(connections))});localStorage.setItem('vidflow_current_project',newName)}if(p.length>50)p.length=50;localStorage.setItem('seedance_projects',JSON.stringify(p))}catch(e){console.error('autoSL error:',e)}}
 function setupAS(){var oa=addNode;addNode=function(t,x,y){var r=oa(t,x,y);setTimeout(autoSL,100);if(r&&(r.type==='text'||r.type==='image'))addMS(r);if(r&&r.type==='video')expandBtn(r.id);return r};var or=removeNode;removeNode=function(i){or(i);setTimeout(autoSL,100)}}
-async function newProj(){try{await saveCurrentCanvas()}catch(e){}nodes=[];connections=[];nodeIdCounter=0;var e=document.getElementById('nodes-layer');if(e)e.innerHTML='';renderConnections();switchPage('create');showToast('New project created')}
+async function newProj(){
+  try{await saveCurrentCanvas()}catch(e){}
+  // Set a new project name for the next canvas
+  try{
+    var arr=JSON.parse(localStorage.getItem("seedance_projects")||"[]");
+    var newName="Project "+(arr.length+1);
+    localStorage.setItem("vidflow_current_project",newName);
+  }catch(e2){}
+  nodes=[];connections=[];nodeIdCounter=0;
+  var e=document.getElementById("nodes-layer");if(e)e.innerHTML="";
+  renderConnections();switchPage("create");showToast("New project created")
+}
 
 function restoreMediaPreview(node) {
   if (!node || !node.el) return;
